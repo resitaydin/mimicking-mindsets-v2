@@ -25,23 +25,23 @@ class OrchestratorAgent:
             persona_descriptions[name] = agent.persona_description
         
         analysis_prompt = f"""
-        Analyze the following user query and determine the relevance of each persona for answering it.
+        Aşağıdaki kullanıcı sorgusunu analiz et ve her bir düşünürün bu soruyu yanıtlamak için ne kadar uygun olduğunu belirle.
         
-        User Query: "{query}"
+        Kullanıcı Sorusu: "{query}"
         
-        Available Personas:
-        1. Cemil Meriç - Turkish intellectual, translator, essayist. Expert in Eastern/Western philosophy, French literature, cultural synthesis, civilization studies.
-        2. Erol Güngör - Turkish psychologist, sociologist. Expert in social psychology, personality psychology, Turkish cultural psychology, social change.
+        Mevcut Düşünürler:
+        1. Cemil Meriç - Türk entelektüeli, çevirmen, deneme yazarı. Doğu/Batı felsefesi, Fransız edebiyatı, kültürel sentez, medeniyet çalışmaları uzmanı.
+        2. Erol Güngör - Türk psikolog, sosyolog. Sosyal psikoloji, kişilik psikolojisi, Türk kültürel psikolojisi, toplumsal değişim uzmanı.
         
-        For each persona, provide a relevance score from 0.0 to 1.0 (where 1.0 is most relevant) based on how well their expertise matches the query.
+        Her düşünür için 0.0 ile 1.0 arasında bir ilgililik skoru ver (1.0 en yüksek ilgililik). Puanlama kriterleri:
         
-        Consider:
-        - The subject matter of the query
-        - The intellectual perspective needed
-        - The type of knowledge required
-        - Historical vs contemporary aspects
+        Değerlendirme kriterlerini göz önünde bulundur:
+        - Sorunun konusu
+        - Gereken entelektüel perspektif
+        - İhtiyaç duyulan bilgi türü
+        - Tarihsel vs çağdaş boyutlar
         
-        Respond ONLY in this exact format:
+        SADECE bu formatta yanıt ver:
         Cemil Meriç: 0.X
         Erol Güngör: 0.X
         """
@@ -114,7 +114,7 @@ class OrchestratorAgent:
                     print(f"Error from {agent_name}: {result}")
                     persona_responses[agent_name] = {
                         "persona": agent_name,
-                        "response": f"I apologize, but I encountered an error while processing your query.",
+                        "response": f"Özür dilerim, sorgunuzu işlerken bir hata ile karşılaştım.",
                         "error": str(result)
                     }
                 else:
@@ -131,7 +131,7 @@ class OrchestratorAgent:
         """Synthesize a coherent final response from multiple persona responses."""
         
         if not persona_responses:
-            return "I apologize, but I was unable to generate a response from any of the intellectual perspectives available."
+            return "Özür dilerim, mevcut entelektüel perspektiflerden herhangi birinden yanıt oluşturamadım."
         
         # Prepare context for synthesis
         responses_text = ""
@@ -148,30 +148,32 @@ class OrchestratorAgent:
         conversation_context = self.memory.get_recent_context()
         
         synthesis_prompt = f"""
-        You are an intelligent orchestrator synthesizing insights from multiple Turkish intellectual perspectives.
+        Sen Türk entelektüel perspektiflerinden gelen çoklu bakış açılarını sentezleyen akıllı bir koordinatörsün.
         
-        Original User Query: "{query}"
+        Orijinal Kullanıcı Sorusu: "{query}"
         
-        {f"Recent Conversation Context:{conversation_context}" if conversation_context else ""}
+        {f"Son Konuşma Bağlamı:{conversation_context}" if conversation_context else ""}
         
-        Responses from Different Perspectives:
+        Farklı Perspektiflerden Gelen Yanıtlar:
         {responses_text}
         
-        Your task is to synthesize these perspectives into a coherent, comprehensive response that:
+        Görevin bu perspektifleri tutarlı ve kapsamlı bir yanıtta sentezlemektir. Yanıtın şu özelliklere sahip olmalı:
         
-        1. **Integrates complementary insights** - Combine related ideas from different thinkers
-        2. **Highlights contrasting viewpoints** - Where perspectives differ, present both sides thoughtfully
-        3. **Maintains intellectual authenticity** - Preserve the unique voice and approach of each thinker
-        4. **Provides balanced coverage** - Give appropriate weight based on relevance to the query
-        5. **Creates coherent flow** - Organize the synthesis logically and readably
-        6. **Adds connecting insights** - Draw meaningful connections between different perspectives when appropriate
-        7. **Acknowledges limitations** - Note when information is incomplete or perspectives are limited
+        1. **Tamamlayıcı görüşleri entegre et** - Farklı düşünürlerden gelen ilişkili fikirleri birleştir
+        2. **Karşıt görüşleri öne çıkar** - Perspektiflerin farklılaştığı yerlerde her iki tarafı da düşünceli bir şekilde sun
+        3. **Entelektüel otantikliği koru** - Her düşünürün benzersiz sesini ve yaklaşımını muhafaza et
+        4. **Dengeli kapsama sağla** - Soruya olan ilgililiğe göre uygun ağırlık ver
+        5. **Tutarlı akış yarat** - Sentezi mantıklı ve okunabilir şekilde organize et
+        6. **Bağlayıcı görüşler ekle** - Uygun olduğunda farklı perspektifler arasında anlamlı bağlantılar kur
+        7. **Sınırlılıkları kabul et** - Bilginin eksik olduğu veya perspektiflerin sınırlı olduğu durumları belirt
         
-        Structure your response to be engaging and informative, showing how these different intellectual traditions can complement each other in addressing the user's question.
+        Yanıtını bu farklı entelektüel geleneklerin kullanıcının sorusunu ele almada nasıl birbirini tamamlayabileceğini gösterecek şekilde ilgi çekici ve bilgilendirici olacak şekilde yapılandır.
         
-        Begin your response directly - do not use meta-commentary about the synthesis process.
+        Yanıtına doğrudan başla - sentez süreci hakkında meta-yorum yapma.
         
-        Synthesized Response:
+        MUTLAKA TÜRKÇE YANIT VER.
+        
+        Sentezlenmiş Yanıt:
         """
         
         try:
@@ -181,7 +183,7 @@ class OrchestratorAgent:
             # Add source attribution if relevant sources were found
             if sources_mentioned:
                 source_list = ", ".join(sorted(sources_mentioned)[:5])  # Limit to first 5 sources
-                synthesized += f"\n\n*Sources referenced: {source_list}*"
+                synthesized += f"\n\n*Referans verilen kaynaklar: {source_list}*"
             
             return synthesized
             
@@ -191,9 +193,9 @@ class OrchestratorAgent:
             if persona_responses:
                 best_agent = max(relevance_scores.items(), key=lambda x: x[1])[0]
                 if best_agent in persona_responses:
-                    return f"Response from {best_agent}:\n\n{persona_responses[best_agent]['response']}"
+                    return f"{best_agent}'den yanıt:\n\n{persona_responses[best_agent]['response']}"
             
-            return "I encountered an error while synthesizing the perspectives. Please try rephrasing your question."
+            return "Perspektifleri sentezlerken bir hata ile karşılaştım. Lütfen sorunuzu yeniden ifade etmeyi deneyin."
     
     async def process_query(self, query: str) -> Dict[str, Any]:
         """Main method to process a user query through the entire orchestration pipeline."""
@@ -250,4 +252,4 @@ class OrchestratorAgent:
     def export_conversation_history(self, filepath: str) -> None:
         """Export conversation history to file."""
         self.memory.export_history(filepath)
-        print(f"💾 Conversation history exported to {filepath}") 
+        print(f"💾 Conversation history exported to {filepath}")  

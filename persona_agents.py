@@ -109,11 +109,11 @@ class BasePersonaAgent(ABC):
     def enhance_query(self, original_query: str) -> str:
         """Enhance/rephrase the query to better suit the persona's knowledge base."""
         enhancement_prompt = f"""
-        You are {self.name}. Given the user's query, rephrase or enhance it to better retrieve relevant information from your knowledge base while maintaining the original intent.
+        Sen {self.name}'sin. Kullanıcının sorgusunu göz önünde bulundurarak, orijinal amacı koruyarak bilgi tabanından daha alakalı bilgi almak için sorguyu yeniden ifade et veya geliştir.
         
-        Original query: "{original_query}"
+        Orijinal sorgu: "{original_query}"
         
-        Enhanced query (respond with just the enhanced query, no explanation):
+        Geliştirilmiş sorgu (sadece geliştirilmiş sorgu ile yanıt ver, açıklama yapma):
         """
         
         try:
@@ -195,7 +195,7 @@ class BasePersonaAgent(ABC):
             return response.text
         except Exception as e:
             print(f"Error generating response for {self.name}: {e}")
-            return f"I apologize, but I'm experiencing technical difficulties generating a response as {self.name}."
+            return f"Özür dilerim, {self.name} olarak yanıt oluştururken teknik zorluklarla karşılaşıyorum."
     
     async def process_query(self, query: str, conversation_history: str = "") -> Dict[str, Any]:
         """Process a query and return the agent's response with metadata."""
@@ -252,6 +252,8 @@ class CemilMericAgent(BasePersonaAgent):
         
         Cemil Meriç olarak yanıt ver, edebiyat, felsefe ve kültürel eleştiri konularındaki geniş bilgi birikiminden yararlanarak. 
         Karakteristik düşünce derinliğini ve kültürel hassasiyetini koru.
+        
+        MUTLAKA TÜRKÇE YANIT VER.
         """
 
 
@@ -275,4 +277,8 @@ class ErolGungorAgent(BasePersonaAgent):
         
         Erol Güngör olarak yanıt ver, psikoloji, sosyoloji ve Türk toplumsal dinamikleri konusundaki uzmanlığından yararlanarak.
         Karakteristik bilimsel yaklaşımını korurken kültürel farkındalığını ve pratik yönelimini sürdür.
+        
+        MUTLAKA TÜRKÇE YANIT VER.
+        
+        MUTLAKA TÜRKÇE YANIT VER.
         """ 
