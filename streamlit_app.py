@@ -19,264 +19,11 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling and mobile responsiveness
-st.markdown("""
-<style>
-    /* Main layout */
-    .main {
-        padding-top: 1rem;
-    }
-    
-    .main .block-container {
-        padding-top: 1rem;
-        padding-bottom: 1rem;
-    }
-    
-    /* Mobile responsiveness */
-    @media (max-width: 768px) {
-        .main .block-container {
-            padding-left: 1rem;
-            padding-right: 1rem;
-        }
-        
-        .persona-card {
-            padding: 1rem !important;
-            margin: 0.5rem 0 !important;
-        }
-        
-        .persona-title {
-            font-size: 1.1rem !important;
-        }
-        
-        .orchestrator-response {
-            padding: 1rem !important;
-            margin: 0.5rem 0 !important;
-        }
-    }
-    
-    /* Persona cards */
-    .persona-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        color: white;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-    }
-    
-    .persona-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-    }
-    
-    .persona-card-cemil {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    
-    .persona-card-erol {
-        background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3Ccircle cx='10' cy='10' r='4'/%3E%3Ccircle cx='50' cy='10' r='4'/%3E%3Ccircle cx='10' cy='50' r='4'/%3E%3Ccircle cx='50' cy='50' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
-    }
-    
-    .persona-title {
-        font-size: 1.3rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-    }
-    
-    .persona-relevance {
-        font-size: 0.9rem;
-        opacity: 0.9;
-        margin-bottom: 1rem;
-        background-color: rgba(255, 255, 255, 0.2);
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        display: inline-block;
-    }
-    
-    /* Orchestrator response */
-    .orchestrator-response {
-        background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-        padding: 1.5rem;
-        border-radius: 15px;
-        margin: 1rem 0;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-        color: #2c3e50;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-    
-    .orchestrator-response:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.2);
-    }
-    
-    /* Chat messages */
-    .chat-message {
-        padding: 1rem;
-        margin: 0.5rem 0;
-        border-radius: 10px;
-        border-left: 4px solid #667eea;
-        background-color: #f8f9fa;
-        animation: fadeIn 0.5s ease-in;
-    }
-    
-    .user-message {
-        border-left-color: #28a745;
-        background-color: #d4edda;
-    }
-    
-    .assistant-message {
-        border-left-color: #667eea;
-        background-color: #e3f2fd;
-    }
-    
-    /* Loading animations */
-    .loading-container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-    }
-    
-    .loading-spinner {
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #667eea;
-        border-radius: 50%;
-        width: 40px;
-        height: 40px;
-        animation: spin 1s linear infinite;
-        margin-right: 1rem;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .pulse {
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { opacity: 1; }
-        50% { opacity: 0.7; }
-        100% { opacity: 1; }
-    }
-    
-    /* Sources and metadata */
-    .sources-list {
-        font-size: 0.8rem;
-        color: #6c757d;
-        margin-top: 0.5rem;
-        background-color: rgba(255, 255, 255, 0.1);
-        padding: 0.5rem;
-        border-radius: 8px;
-    }
-    
-    .metric-container {
-        background: white;
-        padding: 1rem;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        margin: 0.5rem 0;
-        transition: transform 0.2s ease;
-    }
-    
-    .metric-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-    }
-    
-    /* Status indicators */
-    .status-badge {
-        display: inline-block;
-        padding: 0.25rem 0.75rem;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        font-weight: bold;
-        text-transform: uppercase;
-    }
-    
-    .status-processing {
-        background-color: #ffeaa7;
-        color: #fdcb6e;
-    }
-    
-    .status-ready {
-        background-color: #55efc4;
-        color: #00b894;
-    }
-    
-    .status-error {
-        background-color: #fab1a0;
-        color: #e17055;
-    }
-    
-    /* Custom scrollbar for sidebar */
-    .css-1d391kg {
-        scrollbar-width: thin;
-        scrollbar-color: #667eea #f1f1f1;
-    }
-    
-    .css-1d391kg::-webkit-scrollbar {
-        width: 6px;
-    }
-    
-    .css-1d391kg::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    
-    .css-1d391kg::-webkit-scrollbar-thumb {
-        background: #667eea;
-        border-radius: 10px;
-    }
-    
-    .css-1d391kg::-webkit-scrollbar-thumb:hover {
-        background: #5a6fd8;
-    }
-    
-    /* Button enhancements */
-    .stButton > button {
-        border-radius: 25px;
-        border: none;
-        padding: 0.75rem 2rem;
-        font-weight: bold;
-        transition: all 0.3s ease;
-        background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white;
-    }
-    
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
-    }
-    
-    /* Text area improvements */
-    .stTextArea > div > div > textarea {
-        border-radius: 15px;
-        border: 2px solid #e9ecef;
-        padding: 1rem;
-        font-size: 1rem;
-        transition: border-color 0.3s ease;
-    }
-    
-    .stTextArea > div > div > textarea:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-    }
-</style>
-""", unsafe_allow_html=True)
+# Load external CSS for styling
+css_path = os.path.join(os.path.dirname(__file__), "styles.css")
+if os.path.exists(css_path):
+    with open(css_path) as _f:
+        st.markdown(f"<style>{_f.read()}</style>", unsafe_allow_html=True)
 
 # Initialize session state
 if "runtime" not in st.session_state:
@@ -357,27 +104,26 @@ def display_persona_card(agent_name: str, response_data: Dict[str, Any], relevan
         persona_icon = "🧠"
     
     # Format the response text for better readability
-    response_text = response_data.get('response', 'Cevap alınamadı')
+    # Clean potential stray closing divs for safety
+    raw_response = response_data.get('response', 'Cevap alınamadı')
+    response_text = raw_response.replace("</div>", "")
     
     # Create relevance indicator
     relevance_percentage = int(relevance_score * 100)
     relevance_color = "#4CAF50" if relevance_score >= 0.7 else "#FF9800" if relevance_score >= 0.4 else "#F44336"
     
     # Create the card content with better mobile layout
-    card_html = f"""
-    <div class="{card_class}">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <div class="persona-title">{persona_icon} {agent_name}</div>
-            <div style="background: {relevance_color}; color: white; padding: 0.25rem 0.75rem; 
-                        border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
-                {relevance_percentage}% İlgili
-            </div>
-        </div>
-        <div style="line-height: 1.6; font-size: 0.95rem;">
-            {response_text}
-        </div>
+    card_html = f"""<div class="{card_class}">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+    <div class="persona-title">{persona_icon} {agent_name}</div>
+    <div style="background: {relevance_color}; color: white; padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.8rem; font-weight: bold;">
+      {relevance_percentage}% İlgili
     </div>
-    """
+  </div>
+  <div style="line-height: 1.6; font-size: 0.95rem;">
+    {response_text}
+  </div>
+</div>"""
     
     st.markdown(card_html, unsafe_allow_html=True)
     
@@ -449,7 +195,7 @@ async def process_query(query: str):
             st.markdown("""
             <div class="loading-container">
                 <div class="loading-spinner"></div>
-                <div style="font-size: 1.1rem; color: #667eea;">
+                <div style="font-size: 1.1rem; color: #3B82F6;">
                     🤔 Processing your query...
                 </div>
             </div>
@@ -543,10 +289,10 @@ def main():
     st.markdown("""
     <div style="text-align: center; padding: 1rem 0 2rem 0;">
         <h1 style="font-size: 3rem; margin-bottom: 0.5rem; 
-                   background: linear-gradient(45deg, #667eea, #764ba2);
+                   background: #3B82F6;
                    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
                    background-clip: text;">
-            🧠 Mimicking Mindsets v2
+            Mimicking Mindsets v2
         </h1>
         <p style="font-size: 1.2rem; color: #666; margin-bottom: 1rem;">
             Türk düşünürlerinin entelektüel perspektifleriyle etkileşim kurun
@@ -596,7 +342,7 @@ def main():
             st.stop()
     
     # Display available personas
-    st.markdown("### 🎭 Mevcut Düşünürler")
+    st.markdown("### Mevcut Düşünürler")
     col1, col2 = st.columns(2)
     
     with col1:
@@ -620,7 +366,7 @@ def main():
     # Main chat interface
     st.markdown("""
     <div style="text-align: center; margin: 2rem 0 1rem 0;">
-        <h3 style="color: #667eea; margin-bottom: 0.5rem;">💭 Düşünürlerle Sohbet</h3>
+        <h3 style="color: #3B82F6; margin-bottom: 0.5rem;">💭 Düşünürlerle Sohbet</h3>
         <p style="color: #666; font-size: 0.9rem;">
             Sorunuzu yazın ve farklı entelektüel perspektiflerden yanıtlar alın
         </p>
@@ -673,7 +419,7 @@ def main():
                 # Results header with animation
                 st.markdown("""
                 <div style="text-align: center; margin: 2rem 0;">
-                    <h2 style="color: #667eea; animation: fadeIn 1s ease-in;">
+                    <h2 style="color: #3B82F6; animation: fadeIn 1s ease-in;">
                         📊 Yanıtlarınız Hazır!
                     </h2>
                 </div>

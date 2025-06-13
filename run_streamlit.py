@@ -22,10 +22,10 @@ def main():
             sys.executable, "-m", "streamlit", "run", "streamlit_app.py",
             "--server.port", "8501",
             "--server.address", "0.0.0.0",
-            "--theme.base", "light",
-            "--theme.primaryColor", "#667eea",
-            "--theme.backgroundColor", "#ffffff",
-            "--theme.secondaryBackgroundColor", "#f0f2f6"
+            "--theme.base", "dark",
+            "--theme.primaryColor", "#3B82F6",
+            "--theme.backgroundColor", "#111827",
+            "--theme.secondaryBackgroundColor", "#1F2937"
         ], check=True)
         
     except subprocess.CalledProcessError as e:

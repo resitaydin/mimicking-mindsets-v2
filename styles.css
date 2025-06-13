@@ -1,0 +1,238 @@
+/* -------------------------------------------------
+   Global Theme
+   -------------------------------------------------*/
+html, body, .main {
+    background-color: #111827; /* Dark Gray */
+    color: #F9FAFB;            /* White Smoke */
+    font-family: "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, "Open Sans", "Helvetica Neue", sans-serif;
+}
+
+.main .block-container {
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+}
+
+/* -------------------------------------------------
+   Typography & Utilities
+   -------------------------------------------------*/
+.persona-title,
+h1, h2, h3, h4, h5, h6 {
+    color: #F9FAFB;
+}
+
+/* Fade-in animation reused */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0);   }
+}
+
+/* -------------------------------------------------
+   Buttons
+   -------------------------------------------------*/
+.stButton > button {
+    border-radius: 25px;
+    border: none;
+    padding: 0.75rem 2rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    background: #3B82F6;   /* Accent blue */
+    color: #F9FAFB;
+}
+
+.stButton > button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+}
+
+/* -------------------------------------------------
+   Persona Cards
+   -------------------------------------------------*/
+.persona-card {
+    background: #1F2937; /* Primary charcoal */
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin: 1rem 0;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    color: #F9FAFB;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    border: 1px solid #3B82F6;
+}
+
+.persona-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+}
+
+/* Optional persona accent variants (subtle) */
+.persona-card-cemil {
+    border-left: 6px solid #8B5CF6; /* violet accent */
+}
+
+.persona-card-erol {
+    border-left: 6px solid #10B981; /* emerald accent */
+}
+
+/* Title inside persona card */
+.persona-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: #3B82F6;
+}
+
+/* Relevance badge */
+.persona-card div[class*="relevance-badge"],
+.persona-relevance {
+    font-size: 0.8rem;
+    font-weight: bold;
+    background: #3B82F6;
+    color: #F9FAFB;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+}
+
+/* -------------------------------------------------
+   Orchestrator Response
+   -------------------------------------------------*/
+.orchestrator-response {
+    background: #1F2937;
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin: 1rem 0;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    color: #F9FAFB;
+    border: 1px solid #3B82F6;
+}
+
+.orchestrator-response:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45);
+}
+
+/* -------------------------------------------------
+   TextArea & Inputs
+   -------------------------------------------------*/
+.stTextArea > div > div > textarea {
+    border-radius: 15px;
+    border: 2px solid #1F2937;
+    padding: 1rem;
+    font-size: 1rem;
+    background-color: #1F2937;
+    color: #F9FAFB;
+    transition: border-color 0.3s ease;
+}
+
+.stTextArea > div > div > textarea:focus {
+    border-color: #3B82F6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+/* -------------------------------------------------
+   Status Badges
+   -------------------------------------------------*/
+.status-badge {
+    display: inline-block;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.status-processing {
+    background-color: #F59E0B;
+    color: #111827;
+}
+
+.status-ready {
+    background-color: #10B981;
+    color: #111827;
+}
+
+.status-error {
+    background-color: #EF4444;
+    color: #F9FAFB;
+}
+
+/* -------------------------------------------------
+   Scrollbar Styling (visible in sidebar)
+   -------------------------------------------------*/
+.sidebar-content, .css-1d391kg {
+    scrollbar-width: thin;
+    scrollbar-color: #3B82F6 #1F2937;
+}
+
+.css-1d391kg::-webkit-scrollbar {
+    width: 6px;
+}
+
+.css-1d391kg::-webkit-scrollbar-track {
+    background: #1F2937;
+    border-radius: 10px;
+}
+
+.css-1d391kg::-webkit-scrollbar-thumb {
+    background: #3B82F6;
+    border-radius: 10px;
+}
+
+.css-1d391kg::-webkit-scrollbar-thumb:hover {
+    background: #2563EB;
+}
+
+/* -------------------------------------------------
+   Loading Spinner
+   -------------------------------------------------*/
+.loading-spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid #3B82F6;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* -------------------------------------------------
+   Misc.
+   -------------------------------------------------*/
+.metric-container {
+    background: #1F2937;
+    padding: 1rem;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+    margin: 0.5rem 0;
+    transition: transform 0.2s ease;
+    color: #F9FAFB;
+}
+
+.metric-container:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.55);
+}
+
+/* Enhance readability of headings and labels */
+h2, h3, h4, h5, h6, label {
+    color: #F9FAFB !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+}
+
+/* Ensure expanders and their content are white */
+div[data-testid="stExpander"] * {
+    color: #F9FAFB !important;
+}
+
+/* Ensure Streamlit metric labels and values are white */
+div[data-testid="metric-container"] * {
+    color: #F9FAFB !important;
+}
+
+/* Maintain button contrast on hover */
+.stButton > button:hover {
+    background: #3B82F6 !important;
+    color: #F9FAFB !important;
+} 
