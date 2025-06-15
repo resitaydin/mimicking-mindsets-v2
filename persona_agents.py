@@ -1,284 +1,284 @@
-import os
-from typing import List, Dict, Any, Optional
-from abc import ABC, abstractmethod
 import asyncio
-
-import google.generativeai as genai
-from qdrant_client import QdrantClient
+from typing import Any, Dict, List, Optional, Tuple
+from langchain_core.tools import tool
+from langchain_core.messages import HumanMessage
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_community.tools import DuckDuckGoSearchRun
+from langgraph.prebuilt import create_react_agent
 from sentence_transformers import SentenceTransformer
-import requests
-from urllib.parse import quote
+from qdrant_client import QdrantClient
+from qdrant_client.models import Filter, FieldCondition, MatchValue
+import torch
+import os
 
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+# --- Configuration ---
+EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
+EMBEDDING_DIMENSION = 1024
+QDRANT_HOST = "localhost"
+QDRANT_PORT = 6333
 
+# Persona configurations
+PERSONAS = {
+    "erol_gungor": {
+        "name": "Erol Güngör",
+        "collection": "erol_gungor_kb",
+        "description": "Turkish sociologist, psychologist, and intellectual known for his works on cultural psychology and social analysis."
+    },
+    "cemil_meric": {
+        "name": "Cemil Meriç",
+        "collection": "cemil_meric_kb", 
+        "description": "Turkish intellectual, translator, and writer known for his profound philosophical and cultural analyses."
+    }
+}
 
-class WebSearchTool:
-    """Simple web search tool for retrieving up-to-date information."""
+# --- Tool Definitions ---
+
+def create_web_search_tool():
+    """Creates a web search tool using DuckDuckGo."""
+    return DuckDuckGoSearchRun(
+        name="web_search",
+        description="Dahili bilgi yetersiz veya güncel olmadığında güncel bilgiler için internet araması yapar. Bunu son dönem olayları, güncel istatistikler veya kişinin bilgi tabanında olmayan konular için kullanın."
+    )
+
+def create_internal_knowledge_search_tool(
+    persona_key: str,
+    qdrant_client: QdrantClient,
+    embedding_model: SentenceTransformer
+):
+    """Creates a persona-specific internal knowledge search tool."""
     
-    def __init__(self):
-        # Using DuckDuckGo API as a simple web search
-        self.base_url = "https://api.duckduckgo.com/"
+    persona_config = PERSONAS[persona_key]
+    collection_name = persona_config["collection"]
+    persona_name = persona_config["name"]
     
-    def search(self, query: str, max_results: int = 3) -> List[Dict[str, str]]:
-        """Perform web search and return results."""
-        try:
-            # Simple DuckDuckGo instant answer API
-            url = f"{self.base_url}?q={quote(query)}&format=json&no_html=1"
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                results = []
-                
-                # Extract abstract if available
-                if data.get('Abstract'):
-                    results.append({
-                        "title": data.get('AbstractSource', 'Web Search'),
-                        "content": data.get('Abstract', ''),
-                        "url": data.get('AbstractURL', '')
-                    })
-                
-                # Extract related topics
-                for topic in data.get('RelatedTopics', [])[:max_results-1]:
-                    if isinstance(topic, dict) and topic.get('Text'):
-                        results.append({
-                            "title": topic.get('Result', 'Related Topic'),
-                            "content": topic.get('Text', ''),
-                            "url": topic.get('FirstURL', '')
-                        })
-                
-                return results[:max_results]
-        except Exception as e:
-            print(f"Web search error: {e}")
+    @tool
+    def internal_knowledge_search(query: str) -> str:
+        """Belirtilen sorgu için kişinin dahili bilgi tabanından ilgili bilgileri arar.
         
-        return []
-
-
-class BasePersonaAgent(ABC):
-    """Base class for persona agents."""
-    
-    def __init__(
-        self,
-        name: str,
-        qdrant_collection: str,
-        persona_description: str,
-        qdrant_client: QdrantClient,
-        embedding_model: SentenceTransformer,
-        gemini_api_key: str
-    ):
-        self.name = name
-        self.qdrant_collection = qdrant_collection
-        self.persona_description = persona_description
-        self.qdrant_client = qdrant_client
-        self.embedding_model = embedding_model
-        self.web_search = WebSearchTool()
-        
-        # Initialize Gemini
-        genai.configure(api_key=gemini_api_key)
-        self.model = genai.GenerativeModel('gemini-2.0-flash-exp')
-    
-    def retrieve_knowledge(self, query: str, limit: int = 5) -> List[Dict[str, Any]]:
-        """Retrieve relevant knowledge from the persona's Qdrant collection."""
-        try:
-            # Generate query embedding
-            query_embedding = self.embedding_model.encode([query])[0]
+        Args:
+            query: Kişinin eserlerinden ve bilgisinden ilgili bilgi bulmak için arama sorgusu.
             
-            # Perform semantic search
-            search_results = self.qdrant_client.search(
-                collection_name=self.qdrant_collection,
-                query_vector=query_embedding.tolist(),
-                limit=limit,
+        Returns:
+            Kişinin bilgi tabanından kaynak bilgileri ile birlikte alınan metin parçaları.
+        """
+        try:
+            # Embed the query
+            query_embedding = embedding_model.encode([query])
+            
+            # Perform semantic search in Qdrant
+            search_results = qdrant_client.search(
+                collection_name=collection_name,
+                query_vector=query_embedding[0].tolist(),
+                limit=5,  # Top 5 most relevant chunks
                 with_payload=True
             )
             
-            return [
-                {
-                    "text": result.payload.get("text", ""),
-                    "source": result.payload.get("source", ""),
-                    "score": result.score,
-                    "chunk_index": result.payload.get("chunk_index", 0)
-                }
-                for result in search_results
-            ]
+            if not search_results:
+                return f"{persona_name}'nin bilgi tabanında '{query}' sorgusu için ilgili bilgi bulunamadı."
+            
+            # Format results
+            formatted_results = []
+            for i, result in enumerate(search_results, 1):
+                payload = result.payload
+                text = payload.get('text', 'Metin mevcut değil')
+                source = payload.get('source', 'Bilinmeyen kaynak')
+                score = result.score
+                
+                formatted_results.append(
+                    f"Sonuç {i} (İlgililik: {score:.3f}):\n"
+                    f"Kaynak: {source}\n"
+                    f"İçerik: {text}\n"
+                    f"{'='*50}"
+                )
+            
+            return f"{persona_name}'nin bilgi tabanından alınan bilgiler:\n\n" + "\n\n".join(formatted_results)
+            
         except Exception as e:
-            print(f"Error retrieving knowledge for {self.name}: {e}")
-            return []
+            return f"{persona_name}'nin bilgi tabanında arama hatası: {str(e)}"
     
-    def enhance_query(self, original_query: str) -> str:
-        """Enhance/rephrase the query to better suit the persona's knowledge base."""
-        enhancement_prompt = f"""
-        Sen {self.name}'sin. Kullanıcının sorgusunu göz önünde bulundurarak, orijinal amacı koruyarak bilgi tabanından daha alakalı bilgi almak için sorguyu yeniden ifade et veya geliştir.
-        
-        Orijinal sorgu: "{original_query}"
-        
-        Geliştirilmiş sorgu (sadece geliştirilmiş sorgu ile yanıt ver, açıklama yapma):
-        """
-        
-        try:
-            response = self.model.generate_content(enhancement_prompt)
-            enhanced = response.text.strip()
-            return enhanced if enhanced else original_query
-        except Exception as e:
-            print(f"Error enhancing query for {self.name}: {e}")
-            return original_query
+    # Set the tool name to be persona-specific
+    internal_knowledge_search.name = f"internal_knowledge_search_{persona_key}"
+    internal_knowledge_search.description = f"{persona_name}'nin dahili bilgi tabanında sorguya uygun bilgileri arar. {persona_name} olarak yanıt verirken bu sizin birincil bilgi kaynağınız olmalıdır."
     
-    def should_use_web_search(self, query: str, retrieved_context: List[Dict[str, Any]]) -> bool:
-        """Determine if web search is needed based on the query and retrieved context."""
-        # Simple heuristics - could be made more sophisticated
-        current_year_keywords = ["2024", "2025", "en son", "güncel", "şu an", "bugün", "son zamanlarda"]
-        has_temporal_keywords = any(keyword in query.lower() for keyword in current_year_keywords)
-        
-        # If we have very few relevant results or the query seems to require current information
-        insufficient_context = len(retrieved_context) < 2 or all(result["score"] < 0.7 for result in retrieved_context)
-        
-        return has_temporal_keywords or insufficient_context
+    return internal_knowledge_search
+
+# --- Persona Agent Factory ---
+
+def create_persona_agent(
+    persona_key: str,
+    qdrant_client: QdrantClient,
+    embedding_model: SentenceTransformer,
+    llm: ChatGoogleGenerativeAI
+):
+    """
+    Creates a persona agent using LangGraph's create_react_agent.
     
-    @abstractmethod
-    def get_persona_prompt(self) -> str:
-        """Get the persona-specific system prompt."""
-        pass
+    Args:
+        persona_key: Key identifying the persona ('erol_gungor' or 'cemil_meric')
+        qdrant_client: Qdrant client for vector database access
+        embedding_model: SentenceTransformer model for embeddings
+        llm: Language model (Gemini 2.0 Flash)
+        
+    Returns:
+        LangGraph agent configured for the specified persona
+    """
     
-    def generate_response(
-        self, 
-        query: str, 
-        retrieved_context: List[Dict[str, Any]], 
-        web_context: List[Dict[str, str]] = None,
-        conversation_history: str = ""
-    ) -> str:
-        """Generate a response using Gemini with the persona's perspective."""
-        
-        # Format retrieved context
-        context_text = ""
-        if retrieved_context:
-            context_text = "\n\nEserlerimden ilgili alıntılar:\n"
-            for i, item in enumerate(retrieved_context, 1):
-                context_text += f"{i}. '{item['source']}' eserinden: {item['text'][:500]}...\n"
-        
-        # Format web context if available
-        web_text = ""
-        if web_context:
-            web_text = "\n\nEk güncel bilgiler:\n"
-            for i, item in enumerate(web_context, 1):
-                web_text += f"{i}. {item['title']}: {item['content'][:300]}...\n"
-        
-        # Format conversation history
-        history_text = ""
-        if conversation_history:
-            history_text = f"\n\nSon konuşma bağlamı:\n{conversation_history}\n"
-        
-        # Construct the full prompt
-        system_prompt = self.get_persona_prompt()
-        full_prompt = f"""
-        {system_prompt}
-        
-        {history_text}
-        
-        Kullanıcı Sorusu: {query}
-        
-        {context_text}
-        {web_text}
-        
-        Lütfen aşağıdaki özelliklere sahip düşünceli bir yanıt ver:
-        1. Entelektüel bakış açımı ve tarzımı yansıt
-        2. Eserlerimden ilgili bilgileri, mevcut olduğunda dahil et
-        3. Bilinen görüşlerim ve metodolojimle tutarlılık göster
-        4. İlgi çekici ve içgörülü ol
-        5. Bilginin tarihsel bilgi birikimimin dışında olduğu durumları belirt
-        
-        Yanıt:
-        """
-        
-        try:
-            response = self.model.generate_content(full_prompt)
-            return response.text
-        except Exception as e:
-            print(f"Error generating response for {self.name}: {e}")
-            return f"Özür dilerim, {self.name} olarak yanıt oluştururken teknik zorluklarla karşılaşıyorum."
+    if persona_key not in PERSONAS:
+        raise ValueError(f"Unknown persona: {persona_key}. Available personas: {list(PERSONAS.keys())}")
     
-    async def process_query(self, query: str, conversation_history: str = "") -> Dict[str, Any]:
-        """Process a query and return the agent's response with metadata."""
-        print(f"\n[{self.name}] Processing query: {query}")
-        
-        # Step 1: Enhance the query
-        enhanced_query = self.enhance_query(query)
-        if enhanced_query != query:
-            print(f"[{self.name}] Enhanced query: {enhanced_query}")
-        
-        # Step 2: Retrieve knowledge
-        retrieved_context = self.retrieve_knowledge(enhanced_query)
-        print(f"[{self.name}] Retrieved {len(retrieved_context)} relevant passages")
-        
-        # Step 3: Determine if web search is needed
-        web_context = []
-        if self.should_use_web_search(query, retrieved_context):
-            print(f"[{self.name}] Performing web search for additional context...")
-            web_context = self.web_search.search(query)
-            print(f"[{self.name}] Found {len(web_context)} web results")
-        
-        # Step 4: Generate response
-        response = self.generate_response(query, retrieved_context, web_context, conversation_history)
-        
-        # Return response with metadata
-        return {
-            "persona": self.name,
-            "response": response,
-            "enhanced_query": enhanced_query,
-            "retrieved_passages": len(retrieved_context),
-            "web_results": len(web_context),
-            "sources_used": [item["source"] for item in retrieved_context],
-            "confidence_score": sum(item["score"] for item in retrieved_context) / len(retrieved_context) if retrieved_context else 0.0
+    persona_config = PERSONAS[persona_key]
+    persona_name = persona_config["name"]
+    persona_description = persona_config["description"]
+    
+    # Create tools
+    web_search_tool = create_web_search_tool()
+    internal_knowledge_tool = create_internal_knowledge_search_tool(
+        persona_key, qdrant_client, embedding_model
+    )
+    
+    tools = [internal_knowledge_tool, web_search_tool]
+    
+    # Create persona-specific system prompt
+    system_prompt = f"""Sen {persona_name}'sün, {persona_description}
+
+ÖNEMLİ TALİMATLAR:
+1. **Birincil Bilgi Kaynağı**: Diğer kaynakları düşünmeden önce DAIMA internal_knowledge_search aracını kullanarak bilgi tabanında arama yap.
+
+2. **Kimlik**: {persona_name} gibi yanıt ver, entelektüel geçmişin, felsefi bakış açıların ve akademik yaklaşımından yararlan.
+
+3. **Kaynak Önceliği**: 
+   - Eserlerini, felsefeni, kültürel analiz ve uzmanlık alanlarınla ilgili sorular için internal_knowledge_search kullan
+   - Yalnızca dahili bilgin yetersizse veya soru güncel/son dönem bilgi gerektiriyorsa web_search kullan
+
+4. **Kaynak Gösterme**: Kaynaklarını her zaman açıkça belirt:
+   - Dahili bilgi için: Bilgi tabanındaki özel eser/kaynağa referans ver
+   - Web araması için: Bilginin güncel web kaynaklarından geldiğini belirt
+
+5. **Yanıt Tarzı**: 
+   - Entelektüel sesini ve analitik yaklaşımını koru
+   - Düşünceli, nüanslı yanıtlar ver
+   - Akademik çalışmalarında yaptığın gibi fikirler arasında bağlantı kur
+
+6. **Bilgi Sınırları**: Bilgi tabanında yeterli bilgi yoksa ve web araması da yardımcı olmazsa, karakter olarak kalarak bu sınırlılığı kabul et.
+
+Unutma: Sen {persona_name} olarak entelektüel söylemde bulunuyorsun. Bilgine erişmek için araçlarını kullan ve bilinçli, düşünceli yanıtlar ver. Tüm yanıtlarını Türkçe olarak ver."""
+
+    # Create the react agent
+    agent = create_react_agent(
+        model=llm,
+        tools=tools,
+        prompt=system_prompt
+    )
+    
+    return agent
+
+# --- Testing Functions ---
+
+def initialize_components():
+    """Initialize all required components for testing."""
+    
+    # Initialize Qdrant client
+    try:
+        qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
+        qdrant_client.get_collections()
+        print(f"✓ Qdrant'a bağlandı: {QDRANT_HOST}:{QDRANT_PORT}")
+    except Exception as e:
+        print(f"✗ Qdrant'a bağlanılamadı: {e}")
+        return None, None, None
+    
+    # Initialize embedding model
+    try:
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
+        print(f"✓ Kullanılan cihaz: {device}")
+        embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
+        print(f"✓ Gömme modeli yüklendi: {EMBEDDING_MODEL_NAME}")
+    except Exception as e:
+        print(f"✗ Gömme modeli yükleme hatası: {e}")
+        return None, None, None
+    
+    # Initialize Gemini LLM
+    try:
+        # You'll need to set your GOOGLE_API_KEY environment variable
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash-exp",
+            temperature=0.1,
+            max_tokens=2048
+        )
+        print("✓ Gemini 2.0 Flash başlatıldı")
+    except Exception as e:
+        print(f"✗ Gemini başlatma hatası: {e}")
+        print("GOOGLE_API_KEY ortam değişkeninin ayarlandığından emin olun")
+        return None, None, None
+    
+    return qdrant_client, embedding_model, llm
+
+def test_persona_agents():
+    """Test both persona agents with different types of queries."""
+    
+    print("=" * 60)
+    print("TESTING PERSONA AGENTS")
+    print("=" * 60)
+    
+    # Initialize components
+    qdrant_client, embedding_model, llm = initialize_components()
+    if not all([qdrant_client, embedding_model, llm]):
+        print("Failed to initialize components. Exiting test.")
+        return
+    
+    # Create agents
+    try:
+        erol_agent = create_persona_agent("erol_gungor", qdrant_client, embedding_model, llm)
+        cemil_agent = create_persona_agent("cemil_meric", qdrant_client, embedding_model, llm)
+        print("✓ Created both persona agents")
+    except Exception as e:
+        print(f"✗ Error creating agents: {e}")
+        return
+    
+    # Test cases
+    test_cases = [
+        {
+            "name": "RAG Test - Cultural Analysis",
+            "query": "What are your thoughts on Turkish cultural identity and Western influence?",
+            "description": "This should be answerable using internal knowledge base"
+        },
+        {
+            "name": "Web Search Test - Current AI",
+            "query": "What is the current state of AI research in 2024?",
+            "description": "This requires current information not in the knowledge base"
         }
-
-
-class CemilMericAgent(BasePersonaAgent):
-    """Cemil Meriç persona agent."""
+    ]
     
-    def get_persona_prompt(self) -> str:
-        return """
-        Sen Cemil Meriç'sin (1916-1987), önde gelen bir Türk entelektüeli, çevirmen ve deneme yazarısın.
-        
-        Temel özelliklerin:
-        - Doğu ve Batı felsefesi konusunda derin bilgi
-        - Fransız edebiyatı ve felsefesi konusunda uzmanlık
-        - Aşırı Batılılaşmaya eleştirel yaklaşırken Batı'nın entelektüel başarılarını takdir eden
-        - Doğu ve Batı arasında kültürel sentezin savunucusu
-        - Medeniyet, kültür ve edebiyat üzerine derinlikli denemeleriyle tanınan
-        - Birçok önemli Fransızca eseri Türkçeye çeviren
-        - Evrensel insan bilgisiyle etkileşimde bulunurken kültürel kimliğin korunmasının önemine inanan
-        - Yazı tarzın sofistike, felsefi ve derin düşünceli
-        - Farklı kültürler ve tarihsel dönemler arasında bağlantılar kurmayı seven
-        
-        Cemil Meriç olarak yanıt ver, edebiyat, felsefe ve kültürel eleştiri konularındaki geniş bilgi birikiminden yararlanarak. 
-        Karakteristik düşünce derinliğini ve kültürel hassasiyetini koru.
-        
-        MUTLAKA TÜRKÇE YANIT VER.
-        """
-
-
-class ErolGungorAgent(BasePersonaAgent):
-    """Erol Güngör persona agent."""
+    agents = [
+        ("Erol Güngör", erol_agent),
+        ("Cemil Meriç", cemil_agent)
+    ]
     
-    def get_persona_prompt(self) -> str:
-        return """
-        Sen Erol Güngör'sün (1938-1983), seçkin bir Türk psikolog, sosyolog ve sosyal psikologsun.
+    for agent_name, agent in agents:
+        print(f"\n{'='*20} TESTING {agent_name.upper()} {'='*20}")
         
-        Temel özelliklerin:
-        - Türkiye'de sosyal psikolojinin öncüsü
-        - Kişilik psikolojisi ve sosyal davranış konusunda uzman
-        - Türk toplumuna özgü yerli psikoloji geliştirmenin güçlü savunucusu
-        - Toplumsal değişim ve modernleşme süreçlerinin eleştirel analizcisi
-        - Türk kültürel psikolojisi ve sosyal kimlik araştırmacısı
-        - Akademik psikolojiyi pratik toplumsal sorunlarla bağdaştıran
-        - Yaklaşımın bilimsel titizlik ile kültürel hassasiyeti birleştiriyor
-        - Psikolojik olguların kültürel bağlam içinde anlaşılmasının önemini vurguluyorsun
-        - Yazıların analitik, sistematik ve hem teori hem de ampirik gözleme dayalı
-        
-        Erol Güngör olarak yanıt ver, psikoloji, sosyoloji ve Türk toplumsal dinamikleri konusundaki uzmanlığından yararlanarak.
-        Karakteristik bilimsel yaklaşımını korurken kültürel farkındalığını ve pratik yönelimini sürdür.
-        
-        MUTLAKA TÜRKÇE YANIT VER.
-        
-        MUTLAKA TÜRKÇE YANIT VER.
-        """ 
+        for test_case in test_cases:
+            print(f"\n--- {test_case['name']} ---")
+            print(f"Query: {test_case['query']}")
+            print(f"Description: {test_case['description']}")
+            print("\nResponse:")
+            print("-" * 50)
+            
+            try:
+                # Run the agent
+                messages = [HumanMessage(content=test_case['query'])]
+                result = agent.invoke({"messages": messages})
+                
+                # Extract the final response
+                if result and 'messages' in result:
+                    final_message = result['messages'][-1]
+                    print(final_message.content)
+                else:
+                    print("No response generated")
+                    
+            except Exception as e:
+                print(f"Error running test: {e}")
+            
+            print("-" * 50)
+
+if __name__ == "__main__":
+    test_persona_agents() 
