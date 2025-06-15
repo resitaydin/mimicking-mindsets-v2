@@ -22,7 +22,3 @@ python-dotenv>=1.0.0
 
 # Web Interface (for future phases)
 streamlit>=1.28.0
-
-# Optional: Development/Testing
-pytest>=7.4.0
-python-dotenv>=1.0.0 

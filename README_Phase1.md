@@ -21,9 +21,11 @@ This phase implements individual persona agents for Erol Güngör and Cemil Meri
 
 ### Key Features
 
+- **Natural Research Behavior**: Agents respond like real intellectuals - they research unknown topics and integrate findings with their existing knowledge
 - **Priority-based Tool Usage**: Agents prioritize internal knowledge over web search
-- **Source Citation**: Clear attribution of information sources
-- **Persona Consistency**: Agents maintain character-appropriate responses
+- **Source Integration**: Natural blending of internal knowledge and web research results
+- **Authentic Persona Responses**: Agents maintain character-appropriate intellectual voice in Turkish
+- **Hybrid Analysis**: Capability to combine historical knowledge with current information
 - **Error Handling**: Graceful handling of tool failures and missing information
 
 ## 🚀 Quick Start
@@ -109,13 +111,17 @@ PERSONAS = {
 
 The implementation includes comprehensive test cases:
 
-1. **RAG Test**: "What are your thoughts on Turkish cultural identity and Western influence?"
-   - Tests internal knowledge retrieval
-   - Validates persona-specific responses
+1. **RAG Testi**: "Türk kültürel kimliği ve Batı etkisi hakkındaki düşünceleriniz nelerdir?"
+   - Tests internal knowledge retrieval from persona's works
+   - Validates persona-specific responses in Turkish
 
-2. **Web Search Test**: "What is the current state of AI research in 2024?"
+2. **Web Arama Testi**: "2024 yılında yapay zeka araştırmalarının mevcut durumu nedir?"
    - Tests fallback to web search for current information
-   - Validates proper tool selection logic
+   - Validates proper tool selection logic for recent events
+
+3. **Hibrit Test**: "2011'de Suriye'de çıkan iç savaş sonrası Türkiye'deki kültürel ve siyasi değişimleri nasıl yorumlarsınız?"
+   - Tests combination of both internal knowledge (cultural analysis) and web search (recent developments)
+   - Validates natural research behavior and source integration
 
 ## 🎯 Key Implementation Details
 

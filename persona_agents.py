@@ -11,13 +11,16 @@ from qdrant_client.models import Filter, FieldCondition, MatchValue
 import torch
 import os
 
+# Import persona prompts
+from persona_prompts import get_persona_system_prompt, get_persona_info, list_available_personas
+
 # --- Configuration ---
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 
-# Persona configurations
+# Persona configurations (updated to use persona_prompts module)
 PERSONAS = {
     "erol_gungor": {
         "name": "Erol Güngör",
@@ -35,10 +38,36 @@ PERSONAS = {
 
 def create_web_search_tool():
     """Creates a web search tool using DuckDuckGo."""
-    return DuckDuckGoSearchRun(
-        name="web_search",
-        description="Dahili bilgi yetersiz veya güncel olmadığında güncel bilgiler için internet araması yapar. Bunu son dönem olayları, güncel istatistikler veya kişinin bilgi tabanında olmayan konular için kullanın."
-    )
+    
+    # Create the base DuckDuckGo search tool
+    base_search = DuckDuckGoSearchRun()
+    
+    # Wrap it with debug functionality
+    @tool
+    def web_search(query: str) -> str:
+        """Dahili bilgi yetersiz veya güncel olmadığında güncel bilgiler için internet araması yapar. Bunu son dönem olayları, güncel istatistikler veya kişinin bilgi tabanında olmayan konular için kullanın."""
+        
+        print(f"\n🌐 DEBUG: Starting web search for query: '{query}'")
+        
+        try:
+            print(f"🔍 DEBUG: Using DuckDuckGo to search the web...")
+            results = base_search.run(query)
+            
+            print(f"📊 DEBUG: Web search completed successfully")
+            print(f"📄 DEBUG: Search results length: {len(results)} characters")
+            
+            # Show a preview of the results (first 200 chars)
+            preview = results[:200] + "..." if len(results) > 200 else results
+            print(f"👀 DEBUG: Search results preview: {preview}")
+            
+            print(f"✅ DEBUG: Web search completed successfully")
+            return results
+            
+        except Exception as e:
+            print(f"❌ DEBUG: Error during web search: {str(e)}")
+            return f"Web araması hatası: {str(e)}"
+    
+    return web_search
 
 def create_internal_knowledge_search_tool(
     persona_key: str,
@@ -61,11 +90,16 @@ def create_internal_knowledge_search_tool(
         Returns:
             Kişinin bilgi tabanından kaynak bilgileri ile birlikte alınan metin parçaları.
         """
+        print(f"\n🔍 DEBUG: {persona_name} is searching internal knowledge base for: '{query}'")
+        
         try:
             # Embed the query
+            print(f"📊 DEBUG: Embedding query using {EMBEDDING_MODEL_NAME}...")
             query_embedding = embedding_model.encode([query])
+            print(f"✅ DEBUG: Query embedded successfully (dimension: {len(query_embedding[0])})")
             
             # Perform semantic search in Qdrant
+            print(f"🔎 DEBUG: Performing semantic search in Qdrant collection: {collection_name}")
             search_results = qdrant_client.search(
                 collection_name=collection_name,
                 query_vector=query_embedding[0].tolist(),
@@ -73,7 +107,10 @@ def create_internal_knowledge_search_tool(
                 with_payload=True
             )
             
+            print(f"📋 DEBUG: Found {len(search_results)} results from internal knowledge base")
+            
             if not search_results:
+                print(f"❌ DEBUG: No relevant information found in {persona_name}'s knowledge base")
                 return f"{persona_name}'nin bilgi tabanında '{query}' sorgusu için ilgili bilgi bulunamadı."
             
             # Format results
@@ -84,6 +121,8 @@ def create_internal_knowledge_search_tool(
                 source = payload.get('source', 'Bilinmeyen kaynak')
                 score = result.score
                 
+                print(f"📄 DEBUG: Result {i} - Source: {source}, Relevance: {score:.3f}, Text length: {len(text)} chars")
+                
                 formatted_results.append(
                     f"Sonuç {i} (İlgililik: {score:.3f}):\n"
                     f"Kaynak: {source}\n"
@@ -91,9 +130,11 @@ def create_internal_knowledge_search_tool(
                     f"{'='*50}"
                 )
             
+            print(f"✅ DEBUG: Internal knowledge search completed successfully for {persona_name}")
             return f"{persona_name}'nin bilgi tabanından alınan bilgiler:\n\n" + "\n\n".join(formatted_results)
             
         except Exception as e:
+            print(f"❌ DEBUG: Error during internal knowledge search: {str(e)}")
             return f"{persona_name}'nin bilgi tabanında arama hatası: {str(e)}"
     
     # Set the tool name to be persona-specific
@@ -123,53 +164,47 @@ def create_persona_agent(
         LangGraph agent configured for the specified persona
     """
     
-    if persona_key not in PERSONAS:
-        raise ValueError(f"Unknown persona: {persona_key}. Available personas: {list(PERSONAS.keys())}")
+    print(f"\n🤖 DEBUG: Creating persona agent for: {persona_key}")
     
-    persona_config = PERSONAS[persona_key]
-    persona_name = persona_config["name"]
-    persona_description = persona_config["description"]
+    # Validate persona key using the new module
+    available_personas = list_available_personas()
+    if persona_key not in available_personas:
+        raise ValueError(f"Unknown persona: {persona_key}. Available personas: {available_personas}")
+    
+    # Get persona information from the new module
+    persona_info = get_persona_info(persona_key)
+    persona_name = persona_info["name"]
+    
+    print(f"👤 DEBUG: Persona name: {persona_name}")
+    print(f"📅 DEBUG: Persona years: {persona_info['years']}")
+    print(f"🎯 DEBUG: Expertise areas: {', '.join(persona_info['expertise_areas'])}")
     
     # Create tools
+    print(f"🔧 DEBUG: Creating web search tool...")
     web_search_tool = create_web_search_tool()
+    
+    print(f"🔧 DEBUG: Creating internal knowledge search tool...")
     internal_knowledge_tool = create_internal_knowledge_search_tool(
         persona_key, qdrant_client, embedding_model
     )
     
     tools = [internal_knowledge_tool, web_search_tool]
+    print(f"🛠️ DEBUG: Created {len(tools)} tools for {persona_name}")
     
-    # Create persona-specific system prompt
-    system_prompt = f"""Sen {persona_name}'sün, {persona_description}
-
-ÖNEMLİ TALİMATLAR:
-1. **Birincil Bilgi Kaynağı**: Diğer kaynakları düşünmeden önce DAIMA internal_knowledge_search aracını kullanarak bilgi tabanında arama yap.
-
-2. **Kimlik**: {persona_name} gibi yanıt ver, entelektüel geçmişin, felsefi bakış açıların ve akademik yaklaşımından yararlan.
-
-3. **Kaynak Önceliği**: 
-   - Eserlerini, felsefeni, kültürel analiz ve uzmanlık alanlarınla ilgili sorular için internal_knowledge_search kullan
-   - Yalnızca dahili bilgin yetersizse veya soru güncel/son dönem bilgi gerektiriyorsa web_search kullan
-
-4. **Kaynak Gösterme**: Kaynaklarını her zaman açıkça belirt:
-   - Dahili bilgi için: Bilgi tabanındaki özel eser/kaynağa referans ver
-   - Web araması için: Bilginin güncel web kaynaklarından geldiğini belirt
-
-5. **Yanıt Tarzı**: 
-   - Entelektüel sesini ve analitik yaklaşımını koru
-   - Düşünceli, nüanslı yanıtlar ver
-   - Akademik çalışmalarında yaptığın gibi fikirler arasında bağlantı kur
-
-6. **Bilgi Sınırları**: Bilgi tabanında yeterli bilgi yoksa ve web araması da yardımcı olmazsa, karakter olarak kalarak bu sınırlılığı kabul et.
-
-Unutma: Sen {persona_name} olarak entelektüel söylemde bulunuyorsun. Bilgine erişmek için araçlarını kullan ve bilinçli, düşünceli yanıtlar ver. Tüm yanıtlarını Türkçe olarak ver."""
-
+    # Get the complete system prompt from the new module
+    print(f"📝 DEBUG: Generating system prompt for {persona_name}...")
+    system_prompt = get_persona_system_prompt(persona_key)
+    print(f"📏 DEBUG: System prompt length: {len(system_prompt)} characters")
+    
     # Create the react agent
+    print(f"🏗️ DEBUG: Creating LangGraph ReAct agent with Gemini 2.0 Flash...")
     agent = create_react_agent(
         model=llm,
         tools=tools,
         prompt=system_prompt
     )
     
+    print(f"✅ DEBUG: Successfully created {persona_name} agent")
     return agent
 
 # --- Testing Functions ---
@@ -177,108 +212,54 @@ Unutma: Sen {persona_name} olarak entelektüel söylemde bulunuyorsun. Bilgine e
 def initialize_components():
     """Initialize all required components for testing."""
     
+    print(f"\n🚀 DEBUG: Starting component initialization...")
+    
     # Initialize Qdrant client
+    print(f"🔌 DEBUG: Connecting to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}...")
     try:
         qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-        qdrant_client.get_collections()
+        collections = qdrant_client.get_collections()
+        print(f"📊 DEBUG: Found {len(collections.collections)} collections in Qdrant")
+        for collection in collections.collections:
+            print(f"   📁 DEBUG: Collection: {collection.name}")
         print(f"✓ Qdrant'a bağlandı: {QDRANT_HOST}:{QDRANT_PORT}")
     except Exception as e:
+        print(f"❌ DEBUG: Failed to connect to Qdrant: {e}")
         print(f"✗ Qdrant'a bağlanılamadı: {e}")
         return None, None, None
     
     # Initialize embedding model
+    print(f"🧠 DEBUG: Loading embedding model: {EMBEDDING_MODEL_NAME}...")
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        print(f"✓ Kullanılan cihaz: {device}")
+        print(f"💻 DEBUG: Using device: {device}")
+        if device == 'cuda':
+            print(f"🎮 DEBUG: GPU: {torch.cuda.get_device_name(0)}")
+        
         embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
+        print(f"📏 DEBUG: Model embedding dimension: {embedding_model.get_sentence_embedding_dimension()}")
+        print(f"✓ Kullanılan cihaz: {device}")
         print(f"✓ Gömme modeli yüklendi: {EMBEDDING_MODEL_NAME}")
     except Exception as e:
+        print(f"❌ DEBUG: Failed to load embedding model: {e}")
         print(f"✗ Gömme modeli yükleme hatası: {e}")
         return None, None, None
     
     # Initialize Gemini LLM
+    print(f"🤖 DEBUG: Initializing Gemini 2.0 Flash LLM...")
     try:
-        # You'll need to set your GOOGLE_API_KEY environment variable
         llm = ChatGoogleGenerativeAI(
             model="gemini-2.0-flash-exp",
             temperature=0.1,
             max_tokens=2048
         )
+        print(f"🔧 DEBUG: LLM configuration - Model: gemini-2.0-flash-exp, Temperature: 0.1, Max tokens: 2048")
         print("✓ Gemini 2.0 Flash başlatıldı")
     except Exception as e:
+        print(f"❌ DEBUG: Failed to initialize Gemini: {e}")
         print(f"✗ Gemini başlatma hatası: {e}")
         print("GOOGLE_API_KEY ortam değişkeninin ayarlandığından emin olun")
         return None, None, None
     
+    print(f"✅ DEBUG: All components initialized successfully!")
     return qdrant_client, embedding_model, llm
-
-def test_persona_agents():
-    """Test both persona agents with different types of queries."""
-    
-    print("=" * 60)
-    print("TESTING PERSONA AGENTS")
-    print("=" * 60)
-    
-    # Initialize components
-    qdrant_client, embedding_model, llm = initialize_components()
-    if not all([qdrant_client, embedding_model, llm]):
-        print("Failed to initialize components. Exiting test.")
-        return
-    
-    # Create agents
-    try:
-        erol_agent = create_persona_agent("erol_gungor", qdrant_client, embedding_model, llm)
-        cemil_agent = create_persona_agent("cemil_meric", qdrant_client, embedding_model, llm)
-        print("✓ Created both persona agents")
-    except Exception as e:
-        print(f"✗ Error creating agents: {e}")
-        return
-    
-    # Test cases
-    test_cases = [
-        {
-            "name": "RAG Test - Cultural Analysis",
-            "query": "What are your thoughts on Turkish cultural identity and Western influence?",
-            "description": "This should be answerable using internal knowledge base"
-        },
-        {
-            "name": "Web Search Test - Current AI",
-            "query": "What is the current state of AI research in 2024?",
-            "description": "This requires current information not in the knowledge base"
-        }
-    ]
-    
-    agents = [
-        ("Erol Güngör", erol_agent),
-        ("Cemil Meriç", cemil_agent)
-    ]
-    
-    for agent_name, agent in agents:
-        print(f"\n{'='*20} TESTING {agent_name.upper()} {'='*20}")
-        
-        for test_case in test_cases:
-            print(f"\n--- {test_case['name']} ---")
-            print(f"Query: {test_case['query']}")
-            print(f"Description: {test_case['description']}")
-            print("\nResponse:")
-            print("-" * 50)
-            
-            try:
-                # Run the agent
-                messages = [HumanMessage(content=test_case['query'])]
-                result = agent.invoke({"messages": messages})
-                
-                # Extract the final response
-                if result and 'messages' in result:
-                    final_message = result['messages'][-1]
-                    print(final_message.content)
-                else:
-                    print("No response generated")
-                    
-            except Exception as e:
-                print(f"Error running test: {e}")
-            
-            print("-" * 50)
-
-if __name__ == "__main__":
-    test_persona_agents() 
