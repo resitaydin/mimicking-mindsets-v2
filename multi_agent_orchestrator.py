@@ -38,6 +38,7 @@ class GraphState(TypedDict):
     erol_gungor_agent_output: Optional[Dict[str, Any]]
     cemil_meric_agent_output: Optional[Dict[str, Any]]
     synthesized_answer: Optional[str]
+    agent_responses: Optional[Dict[str, str]]
     chat_history: Annotated[List[BaseMessage], add_messages]
 
 # --- Node Functions ---
@@ -193,11 +194,28 @@ Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
         print(f"✅ DEBUG: Synthesis completed successfully")
         print(f"📏 DEBUG: Synthesized response length: {len(synthesized_text)} characters")
         
-        return {"synthesized_answer": synthesized_text}
+        # Prepare individual agent responses for frontend
+        agent_responses = {
+            "Erol Güngör": erol_response,
+            "Cemil Meriç": cemil_response
+        }
+        
+        print(f"🎯 DEBUG: Agent responses prepared for frontend: {list(agent_responses.keys())}")
+        
+        return {
+            "synthesized_answer": synthesized_text,
+            "agent_responses": agent_responses
+        }
         
     except Exception as e:
         print(f"❌ DEBUG: Error during synthesis: {str(e)}")
-        return {"synthesized_answer": f"Sentez hatası: {str(e)}"}
+        return {
+            "synthesized_answer": f"Sentez hatası: {str(e)}",
+            "agent_responses": {
+                "Erol Güngör": erol_response if erol_response else "Yanıt alınamadı",
+                "Cemil Meriç": cemil_response if cemil_response else "Yanıt alınamadı"
+            }
+        }
 
 def update_history_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
     """Sohbet geçmişini güncelleyen node."""
@@ -322,6 +340,7 @@ class MultiAgentOrchestrator:
             "erol_gungor_agent_output": None,
             "cemil_meric_agent_output": None,
             "synthesized_answer": None,
+            "agent_responses": None,
             "chat_history": []
         }
         

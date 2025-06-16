@@ -2,3 +2,13 @@ __pycache__/
 .venv
 .env
 .streamlit
+.vscode/
+# Node modules
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dist/
+build/
+.cache/
+.next/
