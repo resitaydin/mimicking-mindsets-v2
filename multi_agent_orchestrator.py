@@ -11,6 +11,7 @@ Bu system şu bileşenleri içerir:
 - Tool Nodes: Her ajanın tool çağrılarını yöneten node'lar
 - Synthesizer Node: Ajanların çıktılarını birleştiren node
 - Memory Node: Sohbet geçmişini güncelleyen node
+- LangSmith Tracing: Comprehensive agent execution tracing
 """
 
 import asyncio
@@ -30,6 +31,16 @@ from langgraph.checkpoint.memory import MemorySaver
 from persona_agents import initialize_components, create_persona_agent
 from persona_prompts import get_persona_info, list_available_personas
 
+# Import LangSmith tracing
+from langsmith_tracing import (
+    initialize_tracing, 
+    trace_agent_execution, 
+    update_agent_trace, 
+    complete_agent_trace,
+    get_current_agent_status,
+    get_realtime_callback
+)
+
 # --- Graph State Definition ---
 
 class GraphState(TypedDict):
@@ -40,6 +51,10 @@ class GraphState(TypedDict):
     synthesized_answer: Optional[str]
     agent_responses: Optional[Dict[str, str]]
     chat_history: Annotated[List[BaseMessage], add_messages]
+    # Tracing fields
+    session_id: Optional[str]
+    erol_trace_id: Optional[str]
+    cemil_trace_id: Optional[str]
 
 # --- Node Functions ---
 
@@ -49,32 +64,61 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
     print(f"\n🎯 DEBUG: Starting Erol Güngör agent node")
     print(f"🔍 DEBUG: User query: {state['user_query']}")
     
+    # Start tracing
+    trace_id = trace_agent_execution("Erol Güngör", state['user_query'])
+    
     # Get the agent from config
     erol_agent = config.get("configurable", {}).get("erol_agent")
     if not erol_agent:
         print(f"❌ DEBUG: Erol Güngör agent not found in config")
+        complete_agent_trace(trace_id, "", "Erol Güngör ajanı yapılandırılmamış")
         return {
-            "erol_gungor_agent_output": {"error": "Erol Güngör ajanı yapılandırılmamış"}
+            "erol_gungor_agent_output": {"error": "Erol Güngör ajanı yapılandırılmamış"},
+            "erol_trace_id": trace_id
         }
     
     try:
+        # Update trace status
+        update_agent_trace(trace_id, "Sorgu analiz ediliyor...")
+        
         # Create message for the agent
         messages = [HumanMessage(content=state["user_query"])]
         print(f"💬 DEBUG: Invoking Erol Güngör agent")
         
-        # Invoke the agent
-        result = erol_agent.invoke({"messages": messages})
+        # Update trace for agent invocation
+        update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
+        
+        # Get real-time callback for this agent
+        callback = get_realtime_callback("Erol Güngör", trace_id)
+        
+        # Invoke the agent with real-time callback (if available)
+        if callback:
+            result = erol_agent.invoke({"messages": messages}, config={"callbacks": [callback]})
+        else:
+            result = erol_agent.invoke({"messages": messages})
         print(f"✅ DEBUG: Erol Güngör agent completed successfully")
         print(f"📊 DEBUG: Agent returned {len(result.get('messages', []))} messages")
         
+        # Extract response for tracing
+        response_text = ""
+        if result and "messages" in result and result["messages"]:
+            last_message = result["messages"][-1]
+            response_text = last_message.content if hasattr(last_message, 'content') else str(last_message)
+        
+        # Complete trace
+        complete_agent_trace(trace_id, response_text)
+        
         return {
-            "erol_gungor_agent_output": result
+            "erol_gungor_agent_output": result,
+            "erol_trace_id": trace_id
         }
         
     except Exception as e:
         print(f"❌ DEBUG: Error in Erol Güngör agent node: {str(e)}")
+        complete_agent_trace(trace_id, "", str(e))
         return {
-            "erol_gungor_agent_output": {"error": f"Erol Güngör ajanı hatası: {str(e)}"}
+            "erol_gungor_agent_output": {"error": f"Erol Güngör ajanı hatası: {str(e)}"},
+            "erol_trace_id": trace_id
         }
 
 def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
@@ -83,32 +127,61 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
     print(f"\n🎯 DEBUG: Starting Cemil Meriç agent node")
     print(f"🔍 DEBUG: User query: {state['user_query']}")
     
+    # Start tracing
+    trace_id = trace_agent_execution("Cemil Meriç", state['user_query'])
+    
     # Get the agent from config
     cemil_agent = config.get("configurable", {}).get("cemil_agent")
     if not cemil_agent:
         print(f"❌ DEBUG: Cemil Meriç agent not found in config")
+        complete_agent_trace(trace_id, "", "Cemil Meriç ajanı yapılandırılmamış")
         return {
-            "cemil_meric_agent_output": {"error": "Cemil Meriç ajanı yapılandırılmamış"}
+            "cemil_meric_agent_output": {"error": "Cemil Meriç ajanı yapılandırılmamış"},
+            "cemil_trace_id": trace_id
         }
     
     try:
+        # Update trace status
+        update_agent_trace(trace_id, "Felsefi çerçeve oluşturuluyor...")
+        
         # Create message for the agent
         messages = [HumanMessage(content=state["user_query"])]
         print(f"💬 DEBUG: Invoking Cemil Meriç agent")
         
-        # Invoke the agent
-        result = cemil_agent.invoke({"messages": messages})
+        # Update trace for agent invocation
+        update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
+        
+        # Get real-time callback for this agent
+        callback = get_realtime_callback("Cemil Meriç", trace_id)
+        
+        # Invoke the agent with real-time callback (if available)
+        if callback:
+            result = cemil_agent.invoke({"messages": messages}, config={"callbacks": [callback]})
+        else:
+            result = cemil_agent.invoke({"messages": messages})
         print(f"✅ DEBUG: Cemil Meriç agent completed successfully")
         print(f"📊 DEBUG: Agent returned {len(result.get('messages', []))} messages")
         
+        # Extract response for tracing
+        response_text = ""
+        if result and "messages" in result and result["messages"]:
+            last_message = result["messages"][-1]
+            response_text = last_message.content if hasattr(last_message, 'content') else str(last_message)
+        
+        # Complete trace
+        complete_agent_trace(trace_id, response_text)
+        
         return {
-            "cemil_meric_agent_output": result
+            "cemil_meric_agent_output": result,
+            "cemil_trace_id": trace_id
         }
         
     except Exception as e:
         print(f"❌ DEBUG: Error in Cemil Meriç agent node: {str(e)}")
+        complete_agent_trace(trace_id, "", str(e))
         return {
-            "cemil_meric_agent_output": {"error": f"Cemil Meriç ajanı hatası: {str(e)}"}
+            "cemil_meric_agent_output": {"error": f"Cemil Meriç ajanı hatası: {str(e)}"},
+            "cemil_trace_id": trace_id
         }
 
 def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
@@ -334,6 +407,9 @@ class MultiAgentOrchestrator:
         print(f"💬 DEBUG: User query: {user_query}")
         print(f"🧵 DEBUG: Thread ID: {thread_id}")
         
+        # Initialize tracing for this session
+        session_id = initialize_tracing(thread_id)
+        
         # Prepare initial state
         initial_state = {
             "user_query": user_query,
@@ -341,7 +417,10 @@ class MultiAgentOrchestrator:
             "cemil_meric_agent_output": None,
             "synthesized_answer": None,
             "agent_responses": None,
-            "chat_history": []
+            "chat_history": [],
+            "session_id": session_id,
+            "erol_trace_id": None,
+            "cemil_trace_id": None
         }
         
         # Prepare config with agents

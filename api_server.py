@@ -16,6 +16,13 @@ from datetime import datetime
 # Import our multi-agent orchestrator
 from multi_agent_orchestrator import run_multi_agent_query
 
+# Import LangSmith tracing
+from langsmith_tracing import (
+    initialize_tracing,
+    get_current_agent_status,
+    get_tracing_manager
+)
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -178,6 +185,9 @@ async def chat_stream_endpoint(request: ChatRequest):
             # Generate thread ID if not provided
             thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
             
+            # Initialize tracing for this session
+            session_id = initialize_tracing(thread_id)
+            
             # Get or initialize chat history for this thread
             if thread_id not in active_threads:
                 active_threads[thread_id] = []
@@ -193,17 +203,68 @@ async def chat_stream_endpoint(request: ChatRequest):
             # Send initial status
             yield f"data: {json.dumps({'type': 'status', 'message': 'Ajanlar çalışmaya başladı...', 'thread_id': thread_id})}\n\n"
             
-            # Send agent start notifications
-            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Erol Güngör', 'message': 'Erol Güngör düşünüyor...'})}\n\n"
-            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Cemil Meriç', 'message': 'Cemil Meriç düşünüyor...'})}\n\n"
+            # Set up real-time tracing callback
+            tracing_manager = get_tracing_manager()
             
-            # Call the multi-agent orchestrator
+            def trace_callback(event):
+                """Callback to send trace events to frontend."""
+                try:
+                    if event.agent_name:
+                        status_map = {
+                            "running": "working",
+                            "completed": "completed", 
+                            "error": "error"
+                        }
+                        
+                        event_data = {
+                            'type': 'agent_trace',
+                            'agent': event.agent_name,
+                            'message': event.message,
+                            'status': status_map.get(event.status, "working"),
+                            'timestamp': event.timestamp
+                        }
+                        
+                        # This would be sent in a real streaming implementation
+                        # For now, we'll let the orchestrator handle the updates
+                        pass
+                except Exception as e:
+                    logger.error(f"Error in trace callback: {e}")
+            
+            tracing_manager.add_event_callback(trace_callback)
+            
+            # Send agent start notifications based on real tracing
+            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Erol Güngör', 'message': 'Erol Güngör hazırlanıyor...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Cemil Meriç', 'message': 'Cemil Meriç hazırlanıyor...'})}\n\n"
+            
+            # Start the orchestrator in background and send periodic updates
             logger.info(f"DEBUG: Calling multi-agent orchestrator for streaming")
-            result = await asyncio.to_thread(
-                run_multi_agent_query, 
-                request.user_query, 
-                thread_id
+            
+            # Start orchestrator task
+            orchestrator_task = asyncio.create_task(
+                asyncio.to_thread(run_multi_agent_query, request.user_query, thread_id)
             )
+            
+            # Send real-time status updates while orchestrator is running
+            last_status = {}
+            while not orchestrator_task.done():
+                await asyncio.sleep(0.5)  # Update every 0.5 seconds for responsiveness
+                
+                # Get current tracing status
+                try:
+                    current_status = get_current_agent_status()
+                    
+                    # Only send updates if status has changed
+                    for agent_name, status in current_status.items():
+                        if agent_name not in last_status or last_status[agent_name]['message'] != status['message']:
+                            yield f"data: {json.dumps({'type': 'agent_working', 'agent': agent_name, 'message': status['message']})}\n\n"
+                            last_status[agent_name] = status
+                            
+                except Exception as e:
+                    logger.error(f"Error getting tracing status: {e}")
+                    # No fallback messages - rely only on real tracing data
+            
+            # Get the final result
+            result = await orchestrator_task
             
             logger.info(f"DEBUG: Multi-agent streaming result: {result}")
             
@@ -219,7 +280,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             for agent_name, agent_response in agent_responses.items():
                 yield f"data: {json.dumps({'type': 'agent_response', 'agent': agent_name, 'response': agent_response})}\n\n"
             
-            # Send synthesized answer in chunks for streaming effect
+            # Send synthesis start message
             yield f"data: {json.dumps({'type': 'synthesis_start', 'message': 'Yanıtlar birleştiriliyor...'})}\n\n"
             
             # Simulate streaming by sending chunks of the synthesized answer
@@ -273,6 +334,34 @@ async def clear_thread_history(thread_id: str):
         return {"message": f"Thread {thread_id} cleared successfully"}
     else:
         raise HTTPException(status_code=404, detail="Thread not found")
+
+@app.get("/tracing/status")
+async def get_tracing_status():
+    """Get current agent tracing status."""
+    try:
+        current_status = get_current_agent_status()
+        return {
+            "success": True,
+            "agent_status": current_status,
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"DEBUG: Error getting tracing status: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/tracing/export/{session_id}")
+async def export_traces(session_id: str):
+    """Export all traces for a session."""
+    try:
+        tracing_manager = get_tracing_manager()
+        traces = tracing_manager.export_traces(session_id)
+        return {
+            "success": True,
+            "traces": traces
+        }
+    except Exception as e:
+        logger.error(f"DEBUG: Error exporting traces: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # Error handlers
 @app.exception_handler(HTTPException)

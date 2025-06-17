@@ -12,6 +12,7 @@ dependencies = [
     "langchain-core>=0.3.65",
     "langchain-google-genai>=2.1.5",
     "langgraph>=0.4.8",
+    "langsmith>=0.3.45",
     "python-dotenv>=1.1.0",
     "qdrant-client>=1.7.0",
     "requests>=2.32.4",

@@ -4,6 +4,7 @@ import ChatMessage from './components/ChatMessage';
 import PersonaCard from './components/PersonaCard';
 import LoadingIndicator from './components/LoadingIndicator';
 import ErrorMessage from './components/ErrorMessage';
+import AgentTraces from './components/AgentTraces';
 import { chatAPI } from './services/api';
 
 function App() {
@@ -136,6 +137,13 @@ function App() {
             setAgentStatuses(prev => ({
               ...prev,
               [data.agent]: { status: 'thinking', message: data.message }
+            }));
+            break;
+            
+          case 'agent_working':
+            setAgentStatuses(prev => ({
+              ...prev,
+              [data.agent]: { status: 'working', message: data.message }
             }));
             break;
             
@@ -327,6 +335,13 @@ function App() {
         {/* Persona Panel */}
         <div className="persona-panel">
           <h3>Düşünür Profilleri</h3>
+          
+          {/* Agent Traces */}
+          <AgentTraces 
+            agentStatuses={agentStatuses} 
+            isLoading={isLoading} 
+          />
+          
           <div className="persona-cards-container">
             {personas.map((persona, index) => (
               <PersonaCard

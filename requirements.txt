@@ -7,6 +7,9 @@ langchain-core>=0.1.0
 langchain-google-genai>=1.0.0
 langgraph>=0.2.0
 
+# Tracing and Monitoring
+langsmith>=0.1.0
+
 # Vector Database
 qdrant-client>=1.7.0
 

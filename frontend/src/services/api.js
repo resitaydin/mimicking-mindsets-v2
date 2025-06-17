@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-// Backend API base URL - adjust this to match your backend server
+// Backend API base URL
 const API_BASE_URL = 'http://localhost:8000';
 
 // Create axios instance with default config
@@ -198,6 +198,47 @@ export const chatAPI = {
       return {
         success: false,
         error: 'Backend server is not responding'
+      };
+    }
+  },
+
+  /**
+   * Get current agent tracing status
+   * @returns {Promise} - Current tracing status
+   */
+  async getTracingStatus() {
+    try {
+      const response = await apiClient.get('/tracing/status');
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('DEBUG: Error fetching tracing status:', error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message
+      };
+    }
+  },
+
+  /**
+   * Export traces for a session
+   * @param {string} sessionId - Session ID to export traces for
+   * @returns {Promise} - Exported traces
+   */
+  async exportTraces(sessionId) {
+    try {
+      const response = await apiClient.get(`/tracing/export/${sessionId}`);
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      console.error('DEBUG: Error exporting traces:', error);
+      return {
+        success: false,
+        error: error.response?.data?.detail || error.message
       };
     }
   }
