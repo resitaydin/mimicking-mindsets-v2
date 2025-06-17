@@ -87,6 +87,103 @@ export const chatAPI = {
   },
 
   /**
+   * Send a message with streaming response
+   * @param {string} userQuery - The user's message
+   * @param {Array} chatHistory - Previous conversation history
+   * @param {string} threadId - Optional thread ID for conversation continuity
+   * @param {Function} onChunk - Callback for each streaming chunk
+   * @returns {Promise} - Streaming response
+   */
+  async sendMessageStream(userQuery, chatHistory = [], threadId = null, onChunk = null) {
+    try {
+      console.log('DEBUG: Starting streaming request', { userQuery, chatHistory, threadId });
+      
+      const payload = {
+        user_query: userQuery,
+        chat_history: chatHistory,
+        ...(threadId && { thread_id: threadId })
+      };
+
+      const response = await fetch(`${API_BASE_URL}/chat/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+
+      let buffer = '';
+      let finalResult = null;
+
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          
+          if (done) {
+            console.log('DEBUG: Stream completed');
+            break;
+          }
+
+          // Decode the chunk
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          // Process complete lines
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+          for (const line of lines) {
+            if (line.trim() === '') continue;
+            
+            // Parse Server-Sent Events format
+            if (line.startsWith('data: ')) {
+              try {
+                const data = JSON.parse(line.slice(6));
+                console.log('DEBUG: Received streaming data:', data);
+                
+                // Call the chunk callback if provided
+                if (onChunk) {
+                  onChunk(data);
+                }
+
+                // Store final result
+                if (data.type === 'complete') {
+                  finalResult = data;
+                }
+              } catch (parseError) {
+                console.error('DEBUG: Failed to parse streaming data:', parseError, line);
+              }
+            }
+          }
+        }
+      } finally {
+        reader.releaseLock();
+      }
+
+      return {
+        success: true,
+        data: finalResult
+      };
+
+    } catch (error) {
+      console.error('DEBUG: Streaming request failed', error);
+      
+      return {
+        success: false,
+        error: error.message || 'Streaming request failed',
+        status: 'streaming_error'
+      };
+    }
+  },
+
+  /**
    * Health check endpoint to verify backend is running
    * @returns {Promise} - Health status
    */

@@ -5,11 +5,12 @@ Provides REST API endpoints for the React frontend to communicate with the multi
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 import asyncio
 import logging
+import json
 from datetime import datetime
 
 # Import our multi-agent orchestrator
@@ -164,6 +165,97 @@ async def chat_endpoint(request: ChatRequest):
             status_code=500,
             detail=f"Internal server error: {str(e)}"
         )
+
+@app.post("/chat/stream")
+async def chat_stream_endpoint(request: ChatRequest):
+    """
+    Streaming chat endpoint that processes user queries and streams responses.
+    """
+    async def generate_stream():
+        try:
+            logger.info(f"DEBUG: Received streaming chat request - Query: {request.user_query}")
+            
+            # Generate thread ID if not provided
+            thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
+            
+            # Get or initialize chat history for this thread
+            if thread_id not in active_threads:
+                active_threads[thread_id] = []
+            
+            # Add existing chat history if provided
+            if request.chat_history:
+                active_threads[thread_id].extend(request.chat_history)
+            
+            # Add user message to history
+            user_message = ChatMessage(role="user", content=request.user_query)
+            active_threads[thread_id].append(user_message)
+            
+            # Send initial status
+            yield f"data: {json.dumps({'type': 'status', 'message': 'Ajanlar çalışmaya başladı...', 'thread_id': thread_id})}\n\n"
+            
+            # Send agent start notifications
+            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Erol Güngör', 'message': 'Erol Güngör düşünüyor...'})}\n\n"
+            yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Cemil Meriç', 'message': 'Cemil Meriç düşünüyor...'})}\n\n"
+            
+            # Call the multi-agent orchestrator
+            logger.info(f"DEBUG: Calling multi-agent orchestrator for streaming")
+            result = await asyncio.to_thread(
+                run_multi_agent_query, 
+                request.user_query, 
+                thread_id
+            )
+            
+            logger.info(f"DEBUG: Multi-agent streaming result: {result}")
+            
+            if not result or "synthesized_answer" not in result:
+                yield f"data: {json.dumps({'type': 'error', 'message': 'Multi-agent system failed to generate response'})}\n\n"
+                return
+            
+            # Extract responses
+            synthesized_answer = result.get("synthesized_answer", "Yanıt oluşturulamadı.")
+            agent_responses = result.get("agent_responses", {})
+            
+            # Send individual agent responses
+            for agent_name, agent_response in agent_responses.items():
+                yield f"data: {json.dumps({'type': 'agent_response', 'agent': agent_name, 'response': agent_response})}\n\n"
+            
+            # Send synthesized answer in chunks for streaming effect
+            yield f"data: {json.dumps({'type': 'synthesis_start', 'message': 'Yanıtlar birleştiriliyor...'})}\n\n"
+            
+            # Simulate streaming by sending chunks of the synthesized answer
+            words = synthesized_answer.split(' ')
+            chunk_size = 5  # Send 5 words at a time
+            
+            for i in range(0, len(words), chunk_size):
+                chunk = ' '.join(words[i:i + chunk_size])
+                if i + chunk_size < len(words):
+                    chunk += ' '
+                
+                yield f"data: {json.dumps({'type': 'synthesis_chunk', 'chunk': chunk})}\n\n"
+                await asyncio.sleep(0.1)  # Small delay for streaming effect
+            
+            # Add assistant response to history
+            assistant_message = ChatMessage(role="assistant", content=synthesized_answer)
+            active_threads[thread_id].append(assistant_message)
+            
+            # Send completion
+            yield f"data: {json.dumps({'type': 'complete', 'synthesized_answer': synthesized_answer, 'agent_responses': agent_responses, 'thread_id': thread_id, 'timestamp': datetime.now().isoformat()})}\n\n"
+            
+        except Exception as e:
+            logger.error(f"DEBUG: Error in streaming endpoint: {str(e)}")
+            yield f"data: {json.dumps({'type': 'error', 'message': f'Streaming error: {str(e)}'})}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+            "Access-Control-Allow-Headers": "*",
+        }
+    )
 
 @app.get("/threads/{thread_id}", response_model=List[ChatMessage])
 async def get_thread_history(thread_id: str):

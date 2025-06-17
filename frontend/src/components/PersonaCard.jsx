@@ -5,7 +5,8 @@ const PersonaCard = ({
   persona, 
   response, 
   isLoading = false,
-  lastQuery = null 
+  lastQuery = null,
+  agentStatus = null
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -24,6 +25,20 @@ const PersonaCard = ({
         <div className="persona-info">
           {getPersonaIcon(persona.name)}
           <span className="persona-name">{persona.name}</span>
+          {agentStatus && (
+            <span 
+              className="agent-status-indicator"
+              style={{
+                display: 'inline-block',
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: agentStatus.status === 'thinking' ? '#ffa500' : 
+                                agentStatus.status === 'completed' ? '#00ff00' : '#ccc',
+                marginLeft: '8px'
+              }}
+            />
+          )}
         </div>
         <div className="expand-icon">
           {isExpanded ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
@@ -49,14 +64,16 @@ const PersonaCard = ({
               <span className="text-small text-muted">Soru: "{lastQuery}"</span>
             </div>
             
-            {isLoading ? (
+            {(isLoading || agentStatus?.status === 'thinking') ? (
               <div className="persona-loading">
                 <div className="loading-dots">
                   <div className="loading-dot"></div>
                   <div className="loading-dot"></div>
                   <div className="loading-dot"></div>
                 </div>
-                <span className="text-small text-muted">Yanıt hazırlanıyor...</span>
+                <span className="text-small text-muted">
+                  {agentStatus?.message || 'Yanıt hazırlanıyor...'}
+                </span>
               </div>
             ) : response ? (
               <div className="persona-answer">

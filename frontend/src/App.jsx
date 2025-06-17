@@ -17,6 +17,8 @@ function App() {
   const [personaResponses, setPersonaResponses] = useState({});
   const [threadId] = useState(() => `thread_${Date.now()}`);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [streamingContent, setStreamingContent] = useState('');
+  const [agentStatuses, setAgentStatuses] = useState({});
 
   // Refs
   const messagesEndRef = useRef(null);
@@ -97,11 +99,23 @@ function App() {
     setMessages(prev => [...prev, userMessageObj]);
     setIsLoading(true);
 
-    // Reset persona responses
+    // Reset states for new streaming session
     setPersonaResponses({});
+    setStreamingContent('');
+    setAgentStatuses({});
+
+    // Add a placeholder message for streaming content
+    const streamingMessageObj = {
+      id: Date.now() + 1,
+      content: '',
+      type: 'ai',
+      timestamp: new Date().toISOString(),
+      isStreaming: true
+    };
+    setMessages(prev => [...prev, streamingMessageObj]);
 
     try {
-      console.log('DEBUG: Sending message to backend', userMessage);
+      console.log('DEBUG: Starting streaming request', userMessage);
       
       // Prepare chat history for API
       const chatHistory = messages.map(msg => ({
@@ -109,61 +123,110 @@ function App() {
         content: msg.content
       }));
 
-      // Call backend API
-      const response = await chatAPI.sendMessage(userMessage, chatHistory, threadId);
-
-      if (response.success) {
-        console.log('DEBUG: Received response from backend', response.data);
+      // Handle streaming chunks
+      const handleStreamChunk = (data) => {
+        console.log('DEBUG: Processing stream chunk:', data);
         
-        // Add AI response to chat
-        const aiMessageObj = {
-          id: Date.now() + 1,
-          content: response.data.synthesized_answer || 'Yanıt alınamadı.',
-          type: 'ai',
-          timestamp: new Date().toISOString()
-        };
-
-        setMessages(prev => [...prev, aiMessageObj]);
-
-        // Update persona responses
-        if (response.data.agent_responses) {
-          const newPersonaResponses = {};
-          Object.entries(response.data.agent_responses).forEach(([agentName, agentResponse]) => {
-            newPersonaResponses[agentName] = agentResponse;
-          });
-          setPersonaResponses(newPersonaResponses);
+        switch (data.type) {
+          case 'status':
+            console.log('DEBUG: Status update:', data.message);
+            break;
+            
+          case 'agent_start':
+            setAgentStatuses(prev => ({
+              ...prev,
+              [data.agent]: { status: 'thinking', message: data.message }
+            }));
+            break;
+            
+          case 'agent_response':
+            setPersonaResponses(prev => ({
+              ...prev,
+              [data.agent]: data.response
+            }));
+            setAgentStatuses(prev => ({
+              ...prev,
+              [data.agent]: { status: 'completed', message: 'Yanıt hazır' }
+            }));
+            break;
+            
+          case 'synthesis_start':
+            console.log('DEBUG: Synthesis started:', data.message);
+            break;
+            
+          case 'synthesis_chunk':
+            setStreamingContent(prev => {
+              const newContent = prev + data.chunk;
+              // Update the streaming message with the new content
+              setMessages(prevMessages => prevMessages.map(msg => 
+                msg.isStreaming ? { ...msg, content: newContent } : msg
+              ));
+              return newContent;
+            });
+            break;
+            
+          case 'complete':
+            // Update final message
+            setMessages(prev => prev.map(msg => 
+              msg.isStreaming ? { 
+                ...msg, 
+                content: data.synthesized_answer, 
+                isStreaming: false 
+              } : msg
+            ));
+            setStreamingContent('');
+            break;
+            
+          case 'error':
+            console.error('DEBUG: Stream error:', data.message);
+            setError(data.message);
+            break;
+            
+          default:
+            console.log('DEBUG: Unknown stream data type:', data.type);
         }
+      };
 
-      } else {
+      // Call streaming API
+      const response = await chatAPI.sendMessageStream(
+        userMessage, 
+        chatHistory, 
+        threadId, 
+        handleStreamChunk
+      );
+
+      if (!response.success) {
         // Handle API error
-        console.error('DEBUG: API call failed', response.error);
+        console.error('DEBUG: Streaming API call failed', response.error);
         setError(response.error);
         
-        // Add error message to chat
-        const errorMessageObj = {
-          id: Date.now() + 1,
-          content: `Üzgünüm, bir hata oluştu: ${response.error}`,
-          type: 'system',
-          timestamp: new Date().toISOString()
-        };
-
-        setMessages(prev => [...prev, errorMessageObj]);
+        // Update the streaming message with error
+        setMessages(prev => prev.map(msg => 
+          msg.isStreaming ? {
+            ...msg,
+            content: `Üzgünüm, bir hata oluştu: ${response.error}`,
+            type: 'system',
+            isStreaming: false
+          } : msg
+        ));
       }
 
     } catch (error) {
-      console.error('DEBUG: Unexpected error', error);
+      console.error('DEBUG: Unexpected streaming error', error);
       setError('Beklenmeyen bir hata oluştu.');
       
-      const errorMessageObj = {
-        id: Date.now() + 1,
-        content: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
-        type: 'system',
-        timestamp: new Date().toISOString()
-      };
-
-      setMessages(prev => [...prev, errorMessageObj]);
+      // Update the streaming message with error
+      setMessages(prev => prev.map(msg => 
+        msg.isStreaming ? {
+          ...msg,
+          content: 'Beklenmeyen bir hata oluştu. Lütfen tekrar deneyin.',
+          type: 'system',
+          isStreaming: false
+        } : msg
+      ));
     } finally {
       setIsLoading(false);
+      setAgentStatuses({});
     }
   };
 
@@ -272,6 +335,7 @@ function App() {
                 response={personaResponses[persona.name]}
                 isLoading={isLoading}
                 lastQuery={currentQuery}
+                agentStatus={agentStatuses[persona.name]}
               />
             ))}
           </div>
