@@ -72,6 +72,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     synthesized_answer: str
     agent_responses: Dict[str, str]
+    sources: Optional[List[Dict[str, str]]] = []
     chat_history: List[ChatMessage]
     thread_id: str
     timestamp: str
@@ -149,6 +150,7 @@ async def chat_endpoint(request: ChatRequest):
         # Extract synthesized answer and agent responses
         synthesized_answer = result.get("synthesized_answer", "Yanıt oluşturulamadı.")
         agent_responses = result.get("agent_responses", {})
+        sources = result.get("sources", [])
         
         # Add assistant response to history
         assistant_message = ChatMessage(role="assistant", content=synthesized_answer)
@@ -158,6 +160,7 @@ async def chat_endpoint(request: ChatRequest):
         response = ChatResponse(
             synthesized_answer=synthesized_answer,
             agent_responses=agent_responses,
+            sources=sources,
             chat_history=active_threads[thread_id],
             thread_id=thread_id,
             timestamp=datetime.now().isoformat()
@@ -275,6 +278,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             # Extract responses
             synthesized_answer = result.get("synthesized_answer", "Yanıt oluşturulamadı.")
             agent_responses = result.get("agent_responses", {})
+            sources = result.get("sources", [])
             
             # Send individual agent responses
             for agent_name, agent_response in agent_responses.items():
@@ -300,7 +304,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             active_threads[thread_id].append(assistant_message)
             
             # Send completion
-            yield f"data: {json.dumps({'type': 'complete', 'synthesized_answer': synthesized_answer, 'agent_responses': agent_responses, 'thread_id': thread_id, 'timestamp': datetime.now().isoformat()})}\n\n"
+            yield f"data: {json.dumps({'type': 'complete', 'synthesized_answer': synthesized_answer, 'agent_responses': agent_responses, 'sources': sources, 'thread_id': thread_id, 'timestamp': datetime.now().isoformat()})}\n\n"
             
         except Exception as e:
             logger.error(f"DEBUG: Error in streaming endpoint: {str(e)}")

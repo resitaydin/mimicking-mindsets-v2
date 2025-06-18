@@ -1,3 +1,6 @@
+/* Import Poppins font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 /* CSS Reset and base styles */
 * {
   margin: 0;
@@ -32,7 +35,7 @@
 
 /* Base HTML and Body */
 html {
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: 'Poppins', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
   font-size: 14px;
 }
@@ -200,9 +203,17 @@ body {
 
 .message.ai {
   align-self: flex-start;
-  background-color: var(--accent-3);
+  background-color: #A0625A;
   color: var(--text-primary);
   margin-right: auto;
+}
+
+.message.ai .message-content {
+  line-height: 1.4;
+  font-size: 0.90rem;
+  white-space: pre-line;
+  word-spacing: 0.1em;
+  letter-spacing: 0.02em;
 }
 
 .message.system {
@@ -297,7 +308,7 @@ body {
 
 /* Persona Cards Panel */
 .persona-panel {
-  width: 350px;
+  width: 400px;
   height: calc(100vh - 140px); /* Fixed height to match chat container */
   background-color: var(--bg-secondary);
   border-left: 2px solid var(--border-color);
@@ -370,7 +381,7 @@ body {
 
 .persona-header {
   padding: 1rem;
-  background-color: var(--accent-3);
+  background-color: #A0625A;
   color: var(--text-primary);
   cursor: pointer;
   display: flex;
@@ -380,7 +391,7 @@ body {
 }
 
 .persona-header:hover {
-  background-color: #D08B82;
+  background-color: #8B554E;
 }
 
 .persona-info {
@@ -708,4 +719,77 @@ input:focus-visible,
 textarea:focus-visible {
   outline: 2px solid var(--accent-1);
   outline-offset: 2px;
+}
+
+/* Sources Section Styling */
+.sources-section {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.sources-toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(212, 175, 55, 0.15);
+  border: 1px solid var(--accent-1);
+  color: #F4D03F;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+.sources-toggle-btn:hover {
+  background: rgba(212, 175, 55, 0.2);
+  color: #E8C547;
+  border-color: #E8C547;
+}
+
+.sources-list {
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.source-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.source-item:last-child {
+  border-bottom: none;
+}
+
+.source-icon {
+  color: var(--accent-1);
+  margin-top: 0.125rem;
+  flex-shrink: 0;
+  filter: brightness(1.2);
+}
+
+.source-info {
+  flex: 1;
+}
+
+.source-name {
+  font-weight: 500;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  line-height: 1.1;
+}
+
+.source-type {
+  font-size: 0.75rem;
+  color: var(--text-primary);
+  opacity: 0.7;
+  margin-top: 0.125rem;
 }

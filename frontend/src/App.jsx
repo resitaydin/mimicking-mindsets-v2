@@ -179,6 +179,7 @@ function App() {
               msg.isStreaming ? { 
                 ...msg, 
                 content: data.synthesized_answer, 
+                sources: data.sources || [],
                 isStreaming: false 
               } : msg
             ));
@@ -282,6 +283,7 @@ function App() {
                 message={message.content}
                 type={message.type}
                 timestamp={message.timestamp}
+                sources={message.sources}
               />
             ))}
             

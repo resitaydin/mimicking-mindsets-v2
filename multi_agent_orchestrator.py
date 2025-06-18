@@ -50,6 +50,7 @@ class GraphState(TypedDict):
     cemil_meric_agent_output: Optional[Dict[str, Any]]
     synthesized_answer: Optional[str]
     agent_responses: Optional[Dict[str, str]]
+    sources: Optional[List[Dict[str, str]]]
     chat_history: Annotated[List[BaseMessage], add_messages]
     # Tracing fields
     session_id: Optional[str]
@@ -198,6 +199,41 @@ def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any
     # This node doesn't modify state, just serves as a junction
     return {}
 
+def extract_sources_from_messages(messages):
+    """Extract sources from agent messages."""
+    sources = []
+    
+    if not messages:
+        return sources
+    
+    for message in messages:
+        content = message.content if hasattr(message, 'content') else str(message)
+        
+        # Extract vector database sources
+        if "Kaynak:" in content:
+            lines = content.split('\n')
+            for line in lines:
+                if line.strip().startswith("Kaynak:"):
+                    source_name = line.replace("Kaynak:", "").strip()
+                    if source_name and source_name not in [s["name"] for s in sources]:
+                        sources.append({
+                            "type": "vector_db",
+                            "name": source_name,
+                            "description": f"Kaynak: {source_name}"
+                        })
+        
+        # Extract web search indication
+        if any(keyword in content.lower() for keyword in ["web araması", "internet", "güncel", "duckduckgo"]):
+            web_search_exists = any(s["type"] == "web_search" for s in sources)
+            if not web_search_exists:
+                sources.append({
+                    "type": "web_search", 
+                    "name": "Web Araması",
+                    "description": "İnternet araması yapıldı"
+                })
+    
+    return sources
+
 def synthesize_response_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
     """İki ajanın yanıtlarını birleştiren node."""
     
@@ -235,6 +271,23 @@ def synthesize_response_node(state: GraphState, config: RunnableConfig) -> Dict[
     
     print(f"📝 DEBUG: Erol Güngör response length: {len(erol_response)} characters")
     print(f"📝 DEBUG: Cemil Meriç response length: {len(cemil_response)} characters")
+    
+    # Extract sources from both agents
+    all_sources = []
+    
+    # Extract sources from Erol Güngör's messages
+    if erol_output and "messages" in erol_output:
+        erol_sources = extract_sources_from_messages(erol_output["messages"])
+        all_sources.extend(erol_sources)
+        print(f"📚 DEBUG: Found {len(erol_sources)} sources from Erol Güngör")
+    
+    # Extract sources from Cemil Meriç's messages  
+    if cemil_output and "messages" in cemil_output:
+        cemil_sources = extract_sources_from_messages(cemil_output["messages"])
+        all_sources.extend(cemil_sources)
+        print(f"📚 DEBUG: Found {len(cemil_sources)} sources from Cemil Meriç")
+    
+    print(f"📚 DEBUG: Total sources found: {len(all_sources)}")
     
     # Create synthesis prompt
     synthesis_prompt = f"""Sen, Türk entelektüel geleneğini anlayan ve farklı bakış açılarını sentezleyebilen bir asistansın.
@@ -277,7 +330,8 @@ Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
         
         return {
             "synthesized_answer": synthesized_text,
-            "agent_responses": agent_responses
+            "agent_responses": agent_responses,
+            "sources": all_sources
         }
         
     except Exception as e:
@@ -287,7 +341,8 @@ Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
             "agent_responses": {
                 "Erol Güngör": erol_response if erol_response else "Yanıt alınamadı",
                 "Cemil Meriç": cemil_response if cemil_response else "Yanıt alınamadı"
-            }
+            },
+            "sources": all_sources
         }
 
 def update_history_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
