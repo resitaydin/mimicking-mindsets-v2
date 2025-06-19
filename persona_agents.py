@@ -20,6 +20,67 @@ EMBEDDING_DIMENSION = 1024
 QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 
+# Connection pool configuration
+QDRANT_POOL_SIZE = 3  # Small pool for efficiency
+
+# --- Global Connection Pool ---
+import threading
+from queue import Queue
+
+class QdrantConnectionPool:
+    """Simple connection pool for Qdrant clients to improve performance."""
+    
+    def __init__(self, host: str, port: int, pool_size: int = 3):
+        self.host = host
+        self.port = port
+        self.pool_size = pool_size
+        self.pool = Queue(maxsize=pool_size)
+        self.lock = threading.Lock()
+        self._initialize_pool()
+    
+    def _initialize_pool(self):
+        """Initialize the connection pool with Qdrant clients."""
+        print(f"🔗 DEBUG: Initializing Qdrant connection pool (size: {self.pool_size})")
+        
+        for i in range(self.pool_size):
+            try:
+                client = QdrantClient(host=self.host, port=self.port)
+                # Test connection
+                client.get_collections()
+                self.pool.put(client)
+                print(f"✓ DEBUG: Connection {i+1}/{self.pool_size} added to pool")
+            except Exception as e:
+                print(f"❌ DEBUG: Failed to create connection {i+1}: {e}")
+                raise
+        
+        print(f"✅ DEBUG: Qdrant connection pool initialized successfully")
+    
+    def get_client(self) -> QdrantClient:
+        """Get a client from the pool (blocking if pool is empty)."""
+        return self.pool.get()
+    
+    def return_client(self, client: QdrantClient):
+        """Return a client to the pool."""
+        self.pool.put(client)
+    
+    def get_pool_size(self) -> int:
+        """Get current pool size."""
+        return self.pool.qsize()
+
+# Global connection pool instance
+_qdrant_pool = None
+_pool_lock = threading.Lock()
+
+def get_qdrant_pool() -> QdrantConnectionPool:
+    """Get or create the global Qdrant connection pool."""
+    global _qdrant_pool
+    
+    with _pool_lock:
+        if _qdrant_pool is None:
+            _qdrant_pool = QdrantConnectionPool(QDRANT_HOST, QDRANT_PORT, QDRANT_POOL_SIZE)
+    
+    return _qdrant_pool
+
 # Persona configurations (updated to use persona_prompts module)
 PERSONAS = {
     "erol_gungor": {
@@ -71,10 +132,10 @@ def create_web_search_tool():
 
 def create_internal_knowledge_search_tool(
     persona_key: str,
-    qdrant_client: QdrantClient,
+    qdrant_client: QdrantClient,  # Keep for backward compatibility
     embedding_model: SentenceTransformer
 ):
-    """Creates a persona-specific internal knowledge search tool."""
+    """Creates a persona-specific internal knowledge search tool with connection pooling."""
     
     persona_config = PERSONAS[persona_key]
     collection_name = persona_config["collection"]
@@ -92,15 +153,19 @@ def create_internal_knowledge_search_tool(
         """
         print(f"\n🔍 DEBUG: {persona_name} is searching internal knowledge base for: '{query}'")
         
+        # Get connection pool and client
+        pool = get_qdrant_pool()
+        client = pool.get_client()
+        
         try:
             # Embed the query
             print(f"📊 DEBUG: Embedding query using {EMBEDDING_MODEL_NAME}...")
             query_embedding = embedding_model.encode([query])
             print(f"✅ DEBUG: Query embedded successfully (dimension: {len(query_embedding[0])})")
             
-            # Perform semantic search in Qdrant
-            print(f"🔎 DEBUG: Performing semantic search in Qdrant collection: {collection_name}")
-            search_results = qdrant_client.search(
+            # Perform semantic search in Qdrant using pooled connection
+            print(f"🔎 DEBUG: Performing semantic search in Qdrant collection: {collection_name} (pooled connection)")
+            search_results = client.search(
                 collection_name=collection_name,
                 query_vector=query_embedding[0].tolist(),
                 limit=5,  # Top 5 most relevant chunks
@@ -136,6 +201,9 @@ def create_internal_knowledge_search_tool(
         except Exception as e:
             print(f"❌ DEBUG: Error during internal knowledge search: {str(e)}")
             return f"{persona_name}'nin bilgi tabanında arama hatası: {str(e)}"
+        finally:
+            # Always return the client to the pool
+            pool.return_client(client)
     
     # Set the tool name to be persona-specific
     internal_knowledge_search.name = f"internal_knowledge_search_{persona_key}"
@@ -210,22 +278,32 @@ def create_persona_agent(
 # --- Testing Functions ---
 
 def initialize_components():
-    """Initialize all required components for testing."""
+    """Initialize all required components with connection pooling."""
     
     print(f"\n🚀 DEBUG: Starting component initialization...")
     
-    # Initialize Qdrant client
-    print(f"🔌 DEBUG: Connecting to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}...")
+    # Initialize Qdrant connection pool
+    print(f"🔌 DEBUG: Initializing Qdrant connection pool at {QDRANT_HOST}:{QDRANT_PORT}...")
     try:
-        qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
-        collections = qdrant_client.get_collections()
-        print(f"📊 DEBUG: Found {len(collections.collections)} collections in Qdrant")
-        for collection in collections.collections:
-            print(f"   📁 DEBUG: Collection: {collection.name}")
-        print(f"✓ Qdrant'a bağlandı: {QDRANT_HOST}:{QDRANT_PORT}")
+        pool = get_qdrant_pool()
+        
+        # Test pool by getting a client and checking collections
+        test_client = pool.get_client()
+        try:
+            collections = test_client.get_collections()
+            print(f"📊 DEBUG: Found {len(collections.collections)} collections in Qdrant")
+            for collection in collections.collections:
+                print(f"   📁 DEBUG: Collection: {collection.name}")
+            print(f"✓ Qdrant connection pool initialized: {QDRANT_HOST}:{QDRANT_PORT}")
+            
+            # Return a client for backward compatibility (though pool will be used internally)
+            qdrant_client = test_client
+        finally:
+            pool.return_client(test_client)
+            
     except Exception as e:
-        print(f"❌ DEBUG: Failed to connect to Qdrant: {e}")
-        print(f"✗ Qdrant'a bağlanılamadı: {e}")
+        print(f"❌ DEBUG: Failed to initialize Qdrant connection pool: {e}")
+        print(f"✗ Qdrant connection pool initialization failed: {e}")
         return None, None, None
     
     # Initialize embedding model

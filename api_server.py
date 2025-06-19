@@ -14,7 +14,7 @@ import json
 from datetime import datetime
 
 # Import our multi-agent orchestrator
-from multi_agent_orchestrator import run_multi_agent_query
+from multi_agent_orchestrator import run_multi_agent_query, get_global_orchestrator
 
 # Import LangSmith tracing
 from langsmith_tracing import (
@@ -33,6 +33,23 @@ app = FastAPI(
     description="Backend API for chatting with Erol Güngör and Cemil Meriç AI personas",
     version="1.0.0"
 )
+
+# Startup event to initialize components
+@app.on_event("startup")
+async def startup_event():
+    """Initialize the multi-agent orchestrator on server startup for optimal performance."""
+    logger.info("🚀 Starting Mimicking Mindsets API Server...")
+    logger.info("🔧 Initializing multi-agent orchestrator components...")
+    
+    try:
+        # Initialize the global orchestrator during startup
+        # This will load models, connect to databases, etc.
+        orchestrator = get_global_orchestrator()
+        logger.info("✅ Multi-agent orchestrator initialized successfully!")
+        logger.info("🎯 All models loaded and ready for fast responses")
+    except Exception as e:
+        logger.error(f"❌ Failed to initialize orchestrator during startup: {str(e)}")
+        logger.error("⚠️ Server will still start, but first request may be slow")
 
 # Configure CORS for React frontend
 app.add_middleware(
@@ -289,7 +306,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             
             # Simulate streaming by sending chunks of the synthesized answer
             words = synthesized_answer.split(' ')
-            chunk_size = 5  # Send 5 words at a time
+            chunk_size = 20  # Send 5 words at a time
             
             for i in range(0, len(words), chunk_size):
                 chunk = ' '.join(words[i:i + chunk_size])
@@ -388,8 +405,10 @@ if __name__ == "__main__":
     import uvicorn
     
     print("🚀 Starting Mimicking Mindsets API Server...")
+    print("🔧 Components will be initialized during startup for optimal performance")
     print("📖 API Documentation: http://localhost:8000/docs")
     print("🌐 Frontend should connect to: http://localhost:8000")
+    print("⏳ Please wait for initialization to complete...")
     
     uvicorn.run(
         "api_server:app",

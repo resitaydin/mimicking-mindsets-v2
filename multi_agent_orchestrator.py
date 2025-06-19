@@ -507,6 +507,26 @@ class MultiAgentOrchestrator:
 
 # --- Convenience Functions ---
 
+# Global orchestrator instance for reuse across requests
+_global_orchestrator = None
+import threading
+_orchestrator_lock = threading.Lock()
+
+def get_global_orchestrator() -> MultiAgentOrchestrator:
+    """Get or create the global orchestrator instance (thread-safe)."""
+    global _global_orchestrator
+    
+    with _orchestrator_lock:
+        if _global_orchestrator is None:
+            print(f"\n🔧 DEBUG: Creating global orchestrator instance (first time initialization)...")
+            _global_orchestrator = MultiAgentOrchestrator()
+            _global_orchestrator.initialize()
+            print(f"✅ DEBUG: Global orchestrator created and initialized successfully")
+        else:
+            print(f"♻️ DEBUG: Reusing existing global orchestrator instance (performance optimized)")
+    
+    return _global_orchestrator
+
 def create_orchestrator() -> MultiAgentOrchestrator:
     """Yeni bir Multi-Agent Orchestrator oluşturur ve başlatır."""
     
@@ -515,7 +535,10 @@ def create_orchestrator() -> MultiAgentOrchestrator:
     return orchestrator
 
 def run_multi_agent_query(query: str, thread_id: str = "default") -> Dict[str, Any]:
-    """Tek seferlik multi-agent sorgu çalıştırır."""
+    """Tek seferlik multi-agent sorgu çalıştırır - now uses global orchestrator for performance."""
     
-    orchestrator = create_orchestrator()
+    # Use the global orchestrator instead of creating a new one each time
+    # This dramatically improves performance by avoiding model reloading
+    orchestrator = get_global_orchestrator()
+    
     return orchestrator.invoke(query, thread_id) 
