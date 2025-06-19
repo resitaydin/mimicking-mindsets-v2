@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, User } from 'lucide-react';
+import erolGungorImage from '../assets/erol-gungor.jpg';
+import cemilMericImage from '../assets/cemil-meric.jpg';
 
 const PersonaCard = ({ 
   persona, 
@@ -15,7 +17,40 @@ const PersonaCard = ({
   };
 
   const getPersonaIcon = (personaName) => {
-    // You could customize icons based on persona name
+    // Display actual profile pictures for the personas
+    if (personaName === "Erol Güngör") {
+      return (
+        <img 
+          src={erolGungorImage} 
+          alt="Erol Güngör" 
+          className="persona-avatar"
+          style={{
+            width: '50px',    
+            height: '50px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '2px solid var(--border-color)'
+          }}
+        />
+      );
+    } else if (personaName === "Cemil Meriç") {
+      return (
+        <img 
+          src={cemilMericImage} 
+          alt="Cemil Meriç" 
+          className="persona-avatar"
+          style={{
+            width: '50px',
+            height: '50px',
+            borderRadius: '50%',
+            objectFit: 'cover',
+            border: '2px solid var(--border-color)'
+          }}
+        />
+      );
+    }
+    
+    // Fallback to User icon for unknown personas
     return <User size={20} />;
   };
 
@@ -49,7 +84,7 @@ const PersonaCard = ({
         {/* Persona Description */}
         <div className="persona-description mb-2">
           <h4 className="text-small" style={{ color: 'var(--accent-1)', marginBottom: '0.5rem' }}>
-            Kişilik Profili:
+            Yazar Hakkında:
           </h4>
           <p className="text-small">{persona.description}</p>
         </div>

@@ -30,12 +30,12 @@ function App() {
   const defaultPersonas = [
     {
       name: "Erol Güngör",
-      description: "Türk psikolog ve sosyolog (1938-1983). Sosyal psikoloji alanında öncü çalışmalar yapmış, Türk toplumunun kültürel kimliği üzerine derinlemesine araştırmalar gerçekleştirmiştir.",
+      description: "Erol Güngör (1938-1983), Türk sosyal psikoloji profesörüdür. Sosyal psikoloji alanında öncü çalışmalar yapmış, Türk toplumunun kültürel kimliği üzerine derinlemesine araştırmalar gerçekleştirmiştir.",
       expertise: ["Sosyal Psikoloji", "Kültür Analizi", "Türk Toplumu", "Kimlik Çalışmaları"]
     },
     {
       name: "Cemil Meriç",
-      description: "Türk düşünür ve çevirmen (1916-1987). Doğu ve Batı felsefesi arasında köprü kuran, derin kültür ve medeniyet analizleri yapan önemli bir entelektüel.",
+      description: "Hüseyin Cemil Meriç (1916-1987), Türk yazar, çevirmen, düşünür ve sosyolog. Başta dil, tarih, edebiyat, felsefe ve sosyoloji olmak üzere sosyal bilimlerin birçok alanında araştırma yapmış ve yazılar kaleme almış bir düşünce adamıdır. Telif ettiği 12 eseri ve tercümeleriyle Türk edebiyatında önemli bir yeri olduğu kabul edilir.",
       expertise: ["Felsefe", "Medeniyet Tarihi", "Edebiyat", "Kültür Eleştirisi", "Çeviri"]
     }
   ];

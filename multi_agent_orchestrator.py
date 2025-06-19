@@ -199,8 +199,8 @@ def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any
     # This node doesn't modify state, just serves as a junction
     return {}
 
-def extract_sources_from_messages(messages):
-    """Extract sources from agent messages."""
+def extract_sources_from_messages(messages, agent_name=None):
+    """Extract sources from agent messages with agent attribution."""
     sources = []
     
     if not messages:
@@ -219,17 +219,19 @@ def extract_sources_from_messages(messages):
                         sources.append({
                             "type": "vector_db",
                             "name": source_name,
-                            "description": f"Kaynak: {source_name}"
+                            "description": f"Kaynak: {source_name}",
+                            "agent": agent_name
                         })
         
         # Extract web search indication
         if any(keyword in content.lower() for keyword in ["web araması", "internet", "güncel", "duckduckgo"]):
-            web_search_exists = any(s["type"] == "web_search" for s in sources)
+            web_search_exists = any(s["type"] == "web_search" and s.get("agent") == agent_name for s in sources)
             if not web_search_exists:
                 sources.append({
                     "type": "web_search", 
                     "name": "Web Araması",
-                    "description": "İnternet araması yapıldı"
+                    "description": "İnternet araması yapıldı",
+                    "agent": agent_name
                 })
     
     return sources
@@ -277,13 +279,13 @@ def synthesize_response_node(state: GraphState, config: RunnableConfig) -> Dict[
     
     # Extract sources from Erol Güngör's messages
     if erol_output and "messages" in erol_output:
-        erol_sources = extract_sources_from_messages(erol_output["messages"])
+        erol_sources = extract_sources_from_messages(erol_output["messages"], "Erol Güngör")
         all_sources.extend(erol_sources)
         print(f"📚 DEBUG: Found {len(erol_sources)} sources from Erol Güngör")
     
     # Extract sources from Cemil Meriç's messages  
     if cemil_output and "messages" in cemil_output:
-        cemil_sources = extract_sources_from_messages(cemil_output["messages"])
+        cemil_sources = extract_sources_from_messages(cemil_output["messages"], "Cemil Meriç")
         all_sources.extend(cemil_sources)
         print(f"📚 DEBUG: Found {len(cemil_sources)} sources from Cemil Meriç")
     

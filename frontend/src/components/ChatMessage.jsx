@@ -74,12 +74,17 @@ const ChatMessage = ({ message, type, timestamp, sources }) => {
                   </div>
                   <div className="source-info">
                     <div className="source-name">{source.name}</div>
-                    {source.type === 'vector_db' && (
-                      <div className="source-type">(Vektör Veritabanı)</div>
-                    )}
-                    {source.type === 'web_search' && (
-                      <div className="source-type">(Web Araması)</div>
-                    )}
+                    <div className="source-details">
+                      {source.type === 'vector_db' && (
+                        <span className="source-type">(Vektör Veritabanı)</span>
+                      )}
+                      {source.type === 'web_search' && (
+                        <span className="source-type">(Web Araması)</span>
+                      )}
+                      {source.agent && (
+                        <span className="source-agent"> • {source.agent}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
