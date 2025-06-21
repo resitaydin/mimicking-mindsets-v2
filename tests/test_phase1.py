@@ -8,8 +8,8 @@ to demonstrate their natural research behavior and expertise areas.
 import os
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
-from persona_agents import initialize_components, create_persona_agent
-from persona_prompts import list_available_personas, get_persona_info
+from agents.persona_agents import initialize_components, create_persona_agent
+from agents.persona_prompts import list_available_personas, get_persona_info
 
 def test_both_personas():
     """Test both persona agents with comprehensive scenarios."""

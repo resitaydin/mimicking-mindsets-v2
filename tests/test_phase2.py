@@ -10,7 +10,7 @@ import os
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
-from multi_agent_orchestrator import create_orchestrator, run_multi_agent_query
+from agents.multi_agent_orchestrator import create_orchestrator, run_multi_agent_query
 
 def test_multi_agent_orchestration():
     """Multi-agent orchestration sistemini test eder."""
