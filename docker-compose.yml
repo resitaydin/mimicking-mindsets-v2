@@ -118,9 +118,10 @@ services:
     volumes:
       - ./evaluation:/app/evaluation
       - ./logs:/app/logs
+      - .:/app
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - QDRANT_HOST=my-qdrant-instance
+      - QDRANT_HOST=localhost
       - QDRANT_PORT=6333
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
     command: uv run python evaluation/run_evaluation.py

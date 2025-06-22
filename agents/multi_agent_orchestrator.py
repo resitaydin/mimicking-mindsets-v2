@@ -464,6 +464,7 @@ class MultiAgentOrchestrator:
         print(f"🧵 DEBUG: Thread ID: {thread_id}")
         
         # Initialize tracing for this session
+        from evaluation.langsmith_tracing import initialize_tracing
         session_id = initialize_tracing(thread_id)
         
         # Prepare initial state

@@ -18,7 +18,6 @@ from agents.multi_agent_orchestrator import run_multi_agent_query, get_global_or
 
 # Import LangSmith tracing
 from evaluation.langsmith_tracing import (
-    initialize_tracing,
     get_current_agent_status,
     get_tracing_manager
 )
@@ -204,10 +203,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             
             # Generate thread ID if not provided
             thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
-            
-            # Initialize tracing for this session
-            session_id = initialize_tracing(thread_id)
-            
+                        
             # Get or initialize chat history for this thread
             if thread_id not in active_threads:
                 active_threads[thread_id] = []

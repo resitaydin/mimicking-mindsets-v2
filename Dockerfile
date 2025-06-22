@@ -6,7 +6,8 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1 \
     PIP_DISABLE_PIP_VERSION_CHECK=1 \
-    PYTHONPATH=/app
+    PYTHONPATH=/app \
+    UV_CACHE_DIR=/app/.uv-cache
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
@@ -34,7 +35,7 @@ RUN uv pip install --system -r requirements.txt
 COPY . .
 
 # Create necessary directories
-RUN mkdir -p /app/logs /app/data
+RUN mkdir -p /app/logs /app/data /app/.uv-cache
 
 # Change ownership to app user
 RUN chown -R appuser:appuser /app
