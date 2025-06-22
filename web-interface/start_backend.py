@@ -33,10 +33,14 @@ def main():
     print("🚀 Starting Mimicking Mindsets Backend Server...")
     print("=" * 50)
     
-    # Check if we're in the right directory
+    # Ensure we are running inside the same directory as this script (web-interface)
+    script_dir = Path(__file__).resolve().parent
+    os.chdir(script_dir)
+
+    # Check if api_server.py exists in this directory
     if not Path("api_server.py").exists():
-        print("❌ api_server.py not found in current directory")
-        print("Please run this script from the project root directory")
+        print("❌ api_server.py not found alongside start_backend.py")
+        print("Please make sure api_server.py is located in the same directory as start_backend.py")
         sys.exit(1)
     
     # Check dependencies

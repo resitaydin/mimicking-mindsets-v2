@@ -17,7 +17,7 @@ from .persona_prompts import get_persona_system_prompt, get_persona_info, list_a
 # --- Configuration ---
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
-QDRANT_HOST = "localhost"
+QDRANT_HOST = "my-qdrant-instance"
 QDRANT_PORT = 6333
 
 # Connection pool configuration

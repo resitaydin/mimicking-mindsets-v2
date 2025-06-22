@@ -1,49 +1,57 @@
 services:
-  # Vector Database
-  qdrant:
-    image: qdrant/qdrant:latest
-    container_name: my-qdrant-instance
-    ports:
-      - "6333:6333"
-      - "6334:6334"
-    volumes:
-      - qdrant_data:/qdrant/storage
-    environment:
-      - QDRANT__SERVICE__HTTP_PORT=6333
-      - QDRANT__SERVICE__GRPC_PORT=6334
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6333/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
   # Backend API
   backend:
     build:
       context: .
       target: production
     container_name: mimicking-mindsets-backend
+    profiles: ["production"]
     ports:
       - "8000:8000"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - QDRANT_HOST=qdrant
+      - QDRANT_HOST=my-qdrant-instance
       - QDRANT_PORT=6333
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - HF_HOME=/app/hf_cache
+      - HUGGINGFACE_HUB_CACHE=/app/hf_cache
       - ENVIRONMENT=production
     volumes:
       - ./logs:/app/logs
       - ./data:/app/data
-    depends_on:
-      qdrant:
-        condition: service_healthy
+      - ./hf_cache:/app/hf_cache
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+    networks:
+      - mimicking-mindsets-network
+
+  # Backend API (Development)
+  backend-dev:
+    build:
+      context: .
+      target: development
+    container_name: mimicking-mindsets-backend-dev
+    profiles: ["development"]
+    volumes:
+      - .:/app
+      - ./hf_cache:/app/hf_cache
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_HOST=my-qdrant-instance
+      - QDRANT_PORT=6333
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - HF_HOME=/app/hf_cache
+      - HUGGINGFACE_HUB_CACHE=/app/hf_cache
+      - ENVIRONMENT=development
+    restart: unless-stopped
+    networks:
+      - mimicking-mindsets-network
 
   # Frontend (for development)
   frontend-dev:
@@ -58,9 +66,11 @@ services:
     environment:
       - VITE_API_URL=http://localhost:8000
     depends_on:
-      - backend
+      - backend-dev
     profiles:
       - development
+    networks:
+      - mimicking-mindsets-network
 
   # Frontend (for production)
   frontend:
@@ -77,8 +87,10 @@ services:
     restart: unless-stopped
     profiles:
       - production
+    networks:
+      - mimicking-mindsets-network
 
-  # Knowledge Base Builder (one-time setup)
+  # Knowledge Base Builder
   kb-builder:
     build:
       context: .
@@ -89,14 +101,13 @@ services:
       - ./data:/app/data
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - QDRANT_HOST=qdrant
+      - QDRANT_HOST=my-qdrant-instance
       - QDRANT_PORT=6333
     command: uv run python knowledge-base/preprocess/build_kb.py
-    depends_on:
-      qdrant:
-        condition: service_healthy
     profiles:
       - setup
+    networks:
+      - mimicking-mindsets-network
 
   # Evaluation Runner
   evaluator:
@@ -109,19 +120,15 @@ services:
       - ./logs:/app/logs
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - QDRANT_HOST=qdrant
+      - QDRANT_HOST=my-qdrant-instance
       - QDRANT_PORT=6333
       - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
     command: uv run python evaluation/run_evaluation.py
-    depends_on:
-      - backend
     profiles:
       - evaluation
-
-volumes:
-  qdrant_data:
-    driver: local
+    networks:
+      - mimicking-mindsets-network
 
 networks:
-  default:
-    name: mimicking-mindsets-network 
+  mimicking-mindsets-network:
+    external: true

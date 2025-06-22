@@ -33,7 +33,7 @@ EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
 
 # Qdrant Configuration
-QDRANT_HOST = "localhost"
+QDRANT_HOST = "my-qdrant-instance"
 QDRANT_PORT = 6333
 
 # Text Splitting Configuration

@@ -169,7 +169,7 @@ The evaluation system uses:
 export GOOGLE_API_KEY="your-gemini-api-key"
 
 # Optional
-export QDRANT_HOST="localhost"
+export QDRANT_HOST="my-qdrant-instance"
 export QDRANT_PORT="6333"
 export LANGSMITH_API_KEY="your-langsmith-key"  # For tracing
 ```

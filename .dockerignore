@@ -64,3 +64,5 @@ README*.md
 # Evaluation results
 evaluation/demo_evaluation_results/
 evaluation/evaluation_results/ 
+
+hf_cache
