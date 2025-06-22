@@ -28,18 +28,11 @@ from langgraph.prebuilt import ToolNode
 from langgraph.checkpoint.memory import MemorySaver
 
 # Import Phase 1 components
-from persona_agents import initialize_components, create_persona_agent
-from persona_prompts import get_persona_info, list_available_personas
+from .persona_agents import initialize_components, create_persona_agent
+from .persona_prompts import get_persona_info, list_available_personas
 
-# Import LangSmith tracing
-from langsmith_tracing import (
-    initialize_tracing, 
-    trace_agent_execution, 
-    update_agent_trace, 
-    complete_agent_trace,
-    get_current_agent_status,
-    get_realtime_callback
-)
+# Import LangSmith tracing - using lazy imports to avoid circular dependency
+# Note: evaluation imports moved to functions to avoid circular dependency
 
 # --- Graph State Definition ---
 
@@ -64,6 +57,9 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
     
     print(f"\n🎯 DEBUG: Starting Erol Güngör agent node")
     print(f"🔍 DEBUG: User query: {state['user_query']}")
+    
+    # Lazy import to avoid circular dependency
+    from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
     
     # Start tracing
     trace_id = trace_agent_execution("Erol Güngör", state['user_query'])
@@ -127,6 +123,9 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
     
     print(f"\n🎯 DEBUG: Starting Cemil Meriç agent node")
     print(f"🔍 DEBUG: User query: {state['user_query']}")
+    
+    # Lazy import to avoid circular dependency
+    from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
     
     # Start tracing
     trace_id = trace_agent_execution("Cemil Meriç", state['user_query'])

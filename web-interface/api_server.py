@@ -14,10 +14,10 @@ import json
 from datetime import datetime
 
 # Import our multi-agent orchestrator
-from multi_agent_orchestrator import run_multi_agent_query, get_global_orchestrator
+from agents.multi_agent_orchestrator import run_multi_agent_query, get_global_orchestrator
 
 # Import LangSmith tracing
-from langsmith_tracing import (
+from evaluation.langsmith_tracing import (
     initialize_tracing,
     get_current_agent_status,
     get_tracing_manager

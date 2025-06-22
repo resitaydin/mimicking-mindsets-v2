@@ -12,7 +12,7 @@ import torch
 import os
 
 # Import persona prompts
-from persona_prompts import get_persona_system_prompt, get_persona_info, list_available_personas
+from .persona_prompts import get_persona_system_prompt, get_persona_info, list_available_personas
 
 # --- Configuration ---
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"

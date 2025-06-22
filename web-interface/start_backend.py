@@ -20,11 +20,11 @@ def check_dependencies():
         return False
     
     try:
-        from multi_agent_orchestrator import run_multi_agent_query
+        from agents.multi_agent_orchestrator import run_multi_agent_query
         print("✅ Multi-agent orchestrator found")
     except ImportError as e:
         print(f"❌ Multi-agent orchestrator not found: {e}")
-        print("Please ensure multi_agent_orchestrator.py is in the current directory")
+        print("Please ensure agents/multi_agent_orchestrator.py is in the current directory")
         return False
     
     return True

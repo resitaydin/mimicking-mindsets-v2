@@ -18,14 +18,13 @@ from dataclasses import dataclass, asdict
 import pandas as pd
 from tabulate import tabulate
 
-# Core system imports
-from multi_agent_orchestrator import create_orchestrator, run_multi_agent_query
-from persona_agents import initialize_components
+# Core system imports - using lazy imports to avoid circular dependency
+# Note: agents imports moved to methods to avoid circular dependency
 
 # Evaluation framework imports
 try:
     from ragas import evaluate
-    from ragas.metrics import faithfulness, answer_relevancy, context_precision, context_recall
+    from ragas.metrics import faithfulness, answer_relevancy
     from datasets import Dataset
     RAGAS_AVAILABLE = True
     print("✅ RAGAS framework loaded successfully")
@@ -82,8 +81,6 @@ class EvaluationResult:
     # RAGAS scores
     faithfulness_score: Optional[float] = None
     answer_relevancy_score: Optional[float] = None
-    context_precision_score: Optional[float] = None
-    context_recall_score: Optional[float] = None
     
     # Coherence scores
     coherence_score: Optional[float] = None
@@ -121,6 +118,8 @@ class EvaluationPipeline:
         # Initialize the multi-agent orchestrator
         print("🔧 Setting up multi-agent orchestrator...")
         try:
+            # Lazy import to avoid circular dependency
+            from agents.multi_agent_orchestrator import create_orchestrator
             self.orchestrator = create_orchestrator()
             print("✅ Multi-agent orchestrator initialized successfully")
         except Exception as e:
@@ -334,7 +333,7 @@ class EvaluationPipeline:
             
             print(f"🔍 Running RAGAS evaluation with {len(contexts)} contexts...")
             
-            # Define metrics to evaluate (only use metrics that don't require reference answers)
+            # Define metrics to evaluate
             metrics = [faithfulness, answer_relevancy]
             
             # Debug: Print dataset info
@@ -486,9 +485,6 @@ class EvaluationPipeline:
             # Update result with RAGAS scores
             result.faithfulness_score = ragas_scores.get('faithfulness')
             result.answer_relevancy_score = ragas_scores.get('answer_relevancy')
-            # Note: context_precision and context_recall require reference answers, so we skip them
-            result.context_precision_score = None
-            result.context_recall_score = None
         
         # Step 3: Coherence evaluation
         if self.config.enable_coherence and LANGCHAIN_EVAL_AVAILABLE:
@@ -568,8 +564,6 @@ class EvaluationPipeline:
                 "Query": result.query[:50] + "..." if len(result.query) > 50 else result.query,
                 "Faithfulness": f"{result.faithfulness_score:.3f}" if result.faithfulness_score is not None else "N/A",
                 "Answer Relevancy": f"{result.answer_relevancy_score:.3f}" if result.answer_relevancy_score is not None else "N/A",
-                "Context Precision": f"{result.context_precision_score:.3f}" if result.context_precision_score is not None else "N/A",
-                "Context Recall": f"{result.context_recall_score:.3f}" if result.context_recall_score is not None else "N/A",
                 "Coherence": f"{result.coherence_score:.3f}" if result.coherence_score is not None else "N/A",
                 "Sources": len(result.sources),
                 "Errors": len(result.errors)
@@ -586,7 +580,7 @@ class EvaluationPipeline:
         
         # Calculate and display averages
         print(f"\n📈 AVERAGE SCORES:")
-        numeric_columns = ["Faithfulness", "Answer Relevancy", "Context Precision", "Context Recall", "Coherence"]
+        numeric_columns = ["Faithfulness", "Answer Relevancy", "Coherence"]
         
         for col in numeric_columns:
             values = []
@@ -595,10 +589,6 @@ class EvaluationPipeline:
                     values.append(result.faithfulness_score)
                 elif col == "Answer Relevancy" and result.answer_relevancy_score is not None:
                     values.append(result.answer_relevancy_score)
-                elif col == "Context Precision" and result.context_precision_score is not None:
-                    values.append(result.context_precision_score)
-                elif col == "Context Recall" and result.context_recall_score is not None:
-                    values.append(result.context_recall_score)
                 elif col == "Coherence" and result.coherence_score is not None:
                     values.append(result.coherence_score)
             
@@ -623,7 +613,22 @@ def get_default_test_queries() -> List[str]:
         "Modernleşme ve gelenek arasındaki gerilim nasıl çözülebilir?",
         "Batılılaşma sürecinin Türk toplumuna etkileri nelerdir?",
         "Aydın sorumluluğu ve toplumsal değişim arasındaki ilişki nedir?",
-        "Teknolojinin günümüz toplumsal yapısına etkilerini nasıl değerlendiriyorsunuz?"
+        "Teknolojinin günümüz toplumsal yapısına etkilerini nasıl değerlendiriyorsunuz?",
+        "Doğu ve Batı medeniyetleri arasında nasıl bir sentez kurulabilir?",
+        "Milli kültürün korunması ve çağdaşlaşma nasıl dengelenmelidir?",
+        "Entelektüel özgürlük ve toplumsal sorumluluk arasındaki ilişki nedir?",
+        "Eğitim sisteminin toplumsal dönüşümdeki rolü nasıl değerlendirilmelidir?",
+        "Küreselleşmenin yerel kültürler üzerindeki etkisi nedir?",
+        "Sanat ve edebiyatın toplumsal bilinç oluşturmadaki işlevi nedir?",
+        "Geleneksel değerlerin modern hayatta yaşatılması mümkün müdür?",
+        "Bilim ve tekniğin manevi değerlerle ilişkisi nasıl kurulmalıdır?",
+        "Toplumsal adaletsizliklere karşı aydının tavrı nasıl olmalıdır?",
+        "Dil ve kültür arasındaki bağın önemi nedir?",
+        "Tarihsel mirasın günümüze aktarılmasında hangi yöntemler kullanılmalıdır?",
+        "Bireysel özgürlük ve toplumsal düzen arasındaki denge nasıl kurulmalıdır?",
+        "Medya ve iletişim araçlarının kültürel değişimdeki rolü nedir?",
+        "Gençliğin toplumsal dönüşümdeki sorumluluğu nasıl tanımlanmalıdır?",
+        "Çok kültürlülük ve milli kimlik arasında nasıl bir denge kurulabilir?"
     ]
 
 def create_default_evaluation_config() -> EvaluationConfig:
