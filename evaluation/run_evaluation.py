@@ -2,7 +2,7 @@
 """
 Evaluation script for the Multi-Agent Persona System.
 
-This script runs a comprehensive evaluation of the system using 20 test queries
+This script runs a comprehensive evaluation of the system using 30 test queries
 covering various themes related to Turkish cultural identity, modernization,
 and intellectual responsibility.
 """
@@ -38,11 +38,21 @@ def get_comprehensive_queries() -> List[str]:
         "Bilim ve tekniğin manevi değerlerle ilişkisi nasıl kurulmalıdır?",
         "Toplumsal adaletsizliklere karşı aydının tavrı nasıl olmalıdır?",
         "Dil ve kültür arasındaki bağın önemi nedir?",
+        "Felsefe ve bilim arasındaki ilişkiyi nasıl değerlendiriyorsunuz?",
+        "Sosyal psikoloji ve sosyal bilimler arasındaki ilişkiyi nasıl değerlendiriyorsunuz?",
+        "Psikolojinin toplumsal değişim üzerindeki etkisi nedir?",
         "Tarihsel mirasın günümüze aktarılmasında hangi yöntemler kullanılmalıdır?",
         "Bireysel özgürlük ve toplumsal düzen arasındaki denge nasıl kurulmalıdır?",
         "Medya ve iletişim araçlarının kültürel değişimdeki rolü nedir?",
         "Gençliğin toplumsal dönüşümdeki sorumluluğu nasıl tanımlanmalıdır?",
-        "Çok kültürlülük ve milli kimlik arasında nasıl bir denge kurulabilir?"
+        "Çok kültürlülük ve milli kimlik arasında nasıl bir denge kurulabilir?",
+        "Günümüz Türkiye'sinde var olan göçmen sorunları hakkında ne düşünüyorsunuz?",
+        "Türkiye'nin dış politika stratejisi hakkında ne düşünüyorsunuz?",
+        "Global küresel ısınma hakkında ne düşünüyorsunuz?",
+        "Türkiye'deki mevcut eğitim sistemini nasıl değerlendiriyorsunuz?",
+        "Sosyal Medya bağımlılığı hakkında ne düşünüyorsunuz?",
+        "Türkiye'nin jeopolitik konumunun savaşlar üzerindeki etkisi nedir?",
+        "Osmanlı İmparatorluğu'nun izlediği denge politikasının avantaj ve dezavantajları nelerdir?"
     ]
 
 def create_evaluation_config() -> EvaluationConfig:
@@ -56,9 +66,9 @@ def create_evaluation_config() -> EvaluationConfig:
 
 def run_evaluation():
     """Run comprehensive evaluation."""
-    print("🎯 Running Comprehensive Evaluation (20 queries)")
+    print("🎯 Running Comprehensive Evaluation (30 queries)")
     print("=" * 60)
-    print("This evaluation will test the multi-agent system with 20 diverse queries")
+    print("This evaluation will test the multi-agent system with 30 diverse queries")
     print("covering Turkish cultural identity, modernization, and intellectual themes.")
     print("=" * 60)
     
@@ -76,15 +86,15 @@ def main():
     """Main function."""
     
     # Check environment
-    if not os.getenv("GOOGLE_API_KEY"):
-        print("❌ GOOGLE_API_KEY environment variable not set!")
-        print("Please set your Google API key before running the evaluation.")
+    if not os.getenv("OPENAI_API_KEY"):
+        print("❌ OPENAI_API_KEY environment variable not set!")
+        print("Please set your OpenAI API key before running the evaluation.")
         print("\nExample:")
-        print("export GOOGLE_API_KEY='your-api-key-here'")
+        print("export OPENAI_API_KEY='your-api-key-here'")
         return
     
     print("🤖 Multi-Agent Persona System Evaluation")
-    print("This script evaluates the system using RAGAS and LangChain evaluators.")
+    print("This script evaluates the system using RAGAS and LangChain evaluators with GPT-4.1-mini as judge.")
     print()
     
     try:

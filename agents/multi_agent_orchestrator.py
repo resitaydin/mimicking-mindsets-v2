@@ -314,7 +314,7 @@ Sentez yaparken:
 Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
     
     try:
-        print(f"🧠 DEBUG: Sending synthesis request to Gemini...")
+        print(f"🧠 DEBUG: Sending synthesis request to GPT-4.1-mini...")
         synthesis_result = llm.invoke(synthesis_prompt)
         
         synthesized_text = synthesis_result.content if hasattr(synthesis_result, 'content') else str(synthesis_result)

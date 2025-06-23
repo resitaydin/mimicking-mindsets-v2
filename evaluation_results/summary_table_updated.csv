@@ -1,0 +1,21 @@
+Query,Faithfulness,Answer Relevancy,Coherence,Sources,Errors
+Bat?l?la?ma sürecinin Türk toplumuna etkileri nelerdir?,0.828,0.885,1,8,0
+Ayd?n sorumlulu?u ve toplumsal de?i?im aras?ndaki ili?ki nedir?,1,0.87,1,7,0
+Do?u ve Bat? medeniyetleri aras?nda nas?l bir sentez kurulabilir?,0.649,0.861,1,5,0
+Milli kültürün korunmas? ve ça?da?la?ma nas?l dengelenmelidir?,0.943,0,1,5,0
+E?itim sisteminin toplumsal dönü?ümdeki rolü nas?l de?erlendirilmelidir?,1,0.899,1,7,0
+Küreselle?menin yerel kültürler üzerindeki etkisi nedir?,0.95,0,1,7,0
+Sanat ve edebiyat?n toplumsal bilinç olu?turmadaki i?levi nedir?,0.5,0.887,1,9,0
+Geleneksel de?erlerin modern hayatta ya?at?lmas? mümkün müdür?,0.757,0,1,5,0
+Bilim ve tekni?in manevi de?erlerle ili?kisi nas?l kurulmal?d?r?,0.647,0.951,1,5,0
+Toplumsal adaletsizliklere kar?? ayd?n?n tavr? nas?l olmal?d?r?,1,0.845,1,5,0
+Felsefe ve bilim aras?ndaki ili?kiyi nas?l de?erlendiriyorsunuz?,1,0.867,1,7,0
+Sosyal psikoloji ve sosyal bilimler aras?ndaki ili?kiyi nas?l de?erlendiriyorsunuz?,1,0.878,1,8,0
+Psikolojinin toplumsal de?i?im üzerindeki etkisi nedir?,0.773,1,1,4,0
+Tarihsel miras?n günümüze aktar?lmas?nda hangi yöntemler kullan?lmal?d?r?,1,0.782,1,9,0
+Gençli?in toplumsal dönü?ümdeki sorumlulu?u nas?l tan?mlanmal?d?r?,1,0.887,1,9,0
+Günümüz Türkiye'sinde var olan göçmen sorunlar? hakk?nda ne dü?ünüyorsunuz?,0.864,0.88,1,7,0
+Türkiye'nin d?? politika stratejisi hakk?nda ne dü?ünüyorsunuz?,0.8,0,1,2,0
+Türkiye'deki mevcut e?itim sistemini nas?l de?erlendiriyorsunuz?,1,0.888,1,7,0
+Türkiye'nin jeopolitik konumunun sava?lar üzerindeki etkisi nedir?,1,0.974,1,7,0
+Osmanl? ?mparatorlu?u'nun izledi?i denge politikas?n?n avantaj ve dezavantajlar? nelerdir?,0.929,0.899,1,7,0

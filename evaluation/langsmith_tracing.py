@@ -32,10 +32,11 @@ except ImportError:
     CALLBACKS_AVAILABLE = False
     print("⚠️ LangChain callbacks not available. Real-time tracing will be limited.")
 
-LANGSMITH_TRACING=True
-LANGSMITH_ENDPOINT="https://api.smith.langchain.com"
+
+from dotenv import load_dotenv
+load_dotenv()
 LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
-LANGSMITH_PROJECT="mimicking-mindsets"
+LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
 
 @dataclass
 class TraceEvent:

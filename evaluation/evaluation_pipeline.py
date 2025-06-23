@@ -35,12 +35,12 @@ except ImportError as e:
 
 try:
     from langchain.evaluation import load_evaluator
-    from langchain_google_genai import ChatGoogleGenerativeAI
+    from langchain_openai import ChatOpenAI
     LANGCHAIN_EVAL_AVAILABLE = True
     print("✅ LangChain evaluation framework loaded successfully")
 except ImportError as e:
     print(f"❌ LangChain evaluation not available: {e}")
-    print("📦 Install with: pip install langchain-experimental")
+    print("📦 Install with: pip install langchain-experimental langchain-openai")
     LANGCHAIN_EVAL_AVAILABLE = False
 
 # --- Configuration ---
@@ -62,7 +62,7 @@ class EvaluationConfig:
     enable_coherence: bool = True
     
     # Model configuration for evaluation
-    evaluation_model: str = "gemini-2.0-flash-exp"
+    evaluation_model: str = "gpt-4.1-mini"
     temperature: float = 0.1
 
 @dataclass
@@ -130,7 +130,7 @@ class EvaluationPipeline:
         if self.config.enable_coherence and LANGCHAIN_EVAL_AVAILABLE:
             print("🧠 Setting up evaluation LLM...")
             try:
-                self.evaluation_llm = ChatGoogleGenerativeAI(
+                self.evaluation_llm = ChatOpenAI(
                     model=self.config.evaluation_model,
                     temperature=self.config.temperature
                 )
@@ -624,11 +624,21 @@ def get_default_test_queries() -> List[str]:
         "Bilim ve tekniğin manevi değerlerle ilişkisi nasıl kurulmalıdır?",
         "Toplumsal adaletsizliklere karşı aydının tavrı nasıl olmalıdır?",
         "Dil ve kültür arasındaki bağın önemi nedir?",
+        "Felsefe ve bilim arasındaki ilişkiyi nasıl değerlendiriyorsunuz?",
+        "Sosyal psikoloji ve sosyal bilimler arasındaki ilişkiyi nasıl değerlendiriyorsunuz?",
+        "Psikolojinin toplumsal değişim üzerindeki etkisi nedir?",
         "Tarihsel mirasın günümüze aktarılmasında hangi yöntemler kullanılmalıdır?",
         "Bireysel özgürlük ve toplumsal düzen arasındaki denge nasıl kurulmalıdır?",
         "Medya ve iletişim araçlarının kültürel değişimdeki rolü nedir?",
         "Gençliğin toplumsal dönüşümdeki sorumluluğu nasıl tanımlanmalıdır?",
-        "Çok kültürlülük ve milli kimlik arasında nasıl bir denge kurulabilir?"
+        "Çok kültürlülük ve milli kimlik arasında nasıl bir denge kurulabilir?",
+        "Günümüz Türkiye'sinde var olan göçmen sorunları hakkında ne düşünüyorsunuz?",
+        "Türkiye'nin dış politika stratejisi hakkında ne düşünüyorsunuz?",
+        "Global küresel ısınma hakkında ne düşünüyorsunuz?",
+        "Türkiye'deki mevcut eğitim sistemini nasıl değerlendiriyorsunuz?",
+        "Sosyal Medya bağımlılığı hakkında ne düşünüyorsunuz?",
+        "Türkiye'nin jeopolitik konumunun savaşlar üzerindeki etkisi nedir?",
+        "Osmanlı İmparatorluğu'nun izlediği denge politikasının avantaj ve dezavantajları nelerdir?"
     ]
 
 def create_default_evaluation_config() -> EvaluationConfig:
