@@ -51,6 +51,9 @@ class GraphState(TypedDict):
     agent_responses: Optional[Dict[str, str]]
     sources: Optional[List[Dict[str, str]]]
     chat_history: Annotated[List[BaseMessage], add_messages]
+    # Agent-specific memory tracking
+    erol_gungor_history: Annotated[List[BaseMessage], add_messages]
+    cemil_meric_history: Annotated[List[BaseMessage], add_messages]
     # Tracing fields
     session_id: Optional[str]
     erol_trace_id: Optional[str]
@@ -86,12 +89,14 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Update trace status
         update_agent_trace(trace_id, "Sorgu analiz ediliyor...")
         
-        # Use LangGraph's built-in chat_history which includes full conversation context
-        # Add the current user query to the chat history
-        current_message = HumanMessage(content=state["user_query"])
-        messages = state.get("chat_history", []) + [current_message]
+        # Use agent-specific history that only contains this agent's conversation with the user
+        erol_specific_history = state.get("erol_gungor_history", [])
         
-        logger.info(f"Erol Güngör agent using {len(messages)} messages including chat history")
+        # Add the current user query
+        current_message = HumanMessage(content=state["user_query"])
+        messages = erol_specific_history + [current_message]
+        
+        logger.info(f"Erol Güngör agent using {len(messages)} messages (agent-specific history)")
         
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
@@ -107,7 +112,7 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         
         logger.info("Erol Güngör agent completed successfully")
         
-        # Extract response for tracing
+        # Extract response for tracing and history update
         response_text = ""
         if result and "messages" in result and result["messages"]:
             last_message = result["messages"][-1]
@@ -116,17 +121,27 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Complete trace
         complete_agent_trace(trace_id, response_text)
         
+        # Update agent-specific history with user query and agent response
+        agent_response = AIMessage(content=response_text) if response_text else AIMessage(content="Yanıt alınamadı")
+        
         return {
             "erol_gungor_agent_output": result,
-            "erol_trace_id": trace_id
+            "erol_trace_id": trace_id,
+            "erol_gungor_history": [current_message, agent_response]  # Update agent-specific history
         }
         
     except Exception as e:
         logger.error(f"Error in Erol Güngör agent node: {str(e)}")
         complete_agent_trace(trace_id, "", str(e))
+        
+        # Update history even on error
+        current_message = HumanMessage(content=state["user_query"])
+        error_response = AIMessage(content=f"Erol Güngör ajanı hatası: {str(e)}")
+        
         return {
             "erol_gungor_agent_output": {"error": f"Erol Güngör ajanı hatası: {str(e)}"},
-            "erol_trace_id": trace_id
+            "erol_trace_id": trace_id,
+            "erol_gungor_history": [current_message, error_response]
         }
 
 def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
@@ -154,12 +169,14 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Update trace status
         update_agent_trace(trace_id, "Felsefi çerçeve oluşturuluyor...")
         
-        # Use LangGraph's built-in chat_history which includes full conversation context
-        # Add the current user query to the chat history
-        current_message = HumanMessage(content=state["user_query"])
-        messages = state.get("chat_history", []) + [current_message]
+        # Use agent-specific history that only contains this agent's conversation with the user
+        cemil_specific_history = state.get("cemil_meric_history", [])
         
-        logger.info(f"Cemil Meriç agent using {len(messages)} messages including chat history")
+        # Add the current user query
+        current_message = HumanMessage(content=state["user_query"])
+        messages = cemil_specific_history + [current_message]
+        
+        logger.info(f"Cemil Meriç agent using {len(messages)} messages (agent-specific history)")
         
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
@@ -175,7 +192,7 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         
         logger.info("Cemil Meriç agent completed successfully")
         
-        # Extract response for tracing
+        # Extract response for tracing and history update
         response_text = ""
         if result and "messages" in result and result["messages"]:
             last_message = result["messages"][-1]
@@ -184,17 +201,27 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Complete trace
         complete_agent_trace(trace_id, response_text)
         
+        # Update agent-specific history with user query and agent response
+        agent_response = AIMessage(content=response_text) if response_text else AIMessage(content="Yanıt alınamadı")
+        
         return {
             "cemil_meric_agent_output": result,
-            "cemil_trace_id": trace_id
+            "cemil_trace_id": trace_id,
+            "cemil_meric_history": [current_message, agent_response]  # Update agent-specific history
         }
         
     except Exception as e:
         logger.error(f"Error in Cemil Meriç agent node: {str(e)}")
         complete_agent_trace(trace_id, "", str(e))
+        
+        # Update history even on error
+        current_message = HumanMessage(content=state["user_query"])
+        error_response = AIMessage(content=f"Cemil Meriç ajanı hatası: {str(e)}")
+        
         return {
             "cemil_meric_agent_output": {"error": f"Cemil Meriç ajanı hatası: {str(e)}"},
-            "cemil_trace_id": trace_id
+            "cemil_trace_id": trace_id,
+            "cemil_meric_history": [current_message, error_response]
         }
 
 def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
