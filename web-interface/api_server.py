@@ -19,12 +19,15 @@ from agents.multi_agent_orchestrator import run_multi_agent_query, get_global_or
 # Import LangSmith tracing
 from evaluation.langsmith_tracing import (
     get_current_agent_status,
-    get_tracing_manager
+    get_tracing_manager,
+    initialize_tracing_system
 )
 
+# Import logging configuration
+from utils.logging_config import get_api_logger
+
 # Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger = get_api_logger()
 
 # Create FastAPI app
 app = FastAPI(
@@ -37,18 +40,22 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize the multi-agent orchestrator on server startup for optimal performance."""
-    logger.info("🚀 Starting Mimicking Mindsets API Server...")
-    logger.info("🔧 Initializing multi-agent orchestrator components...")
+    logger.info("Starting Mimicking Mindsets API Server...")
+    logger.info("Initializing multi-agent orchestrator components...")
     
     try:
+        # Initialize tracing system first
+        tracing_ok = initialize_tracing_system()
+        logger.info(f"Tracing system initialization: {'✓' if tracing_ok else '✗'}")
+        
         # Initialize the global orchestrator during startup
         # This will load models, connect to databases, etc.
         orchestrator = get_global_orchestrator()
-        logger.info("✅ Multi-agent orchestrator initialized successfully!")
-        logger.info("🎯 All models loaded and ready for fast responses")
+        logger.info("Multi-agent orchestrator initialized successfully!")
+        logger.info("All models loaded and ready for fast responses")
     except Exception as e:
-        logger.error(f"❌ Failed to initialize orchestrator during startup: {str(e)}")
-        logger.error("⚠️ Server will still start, but first request may be slow")
+        logger.error(f"Failed to initialize orchestrator during startup: {str(e)}")
+        logger.error("Server will still start, but first request may be slow")
 
 # Configure CORS for React frontend
 app.add_middleware(
@@ -67,12 +74,10 @@ app.add_middleware(
 # Add request logging middleware
 @app.middleware("http")
 async def log_requests(request, call_next):
-    logger.info(f"DEBUG: Incoming request: {request.method} {request.url}")
-    logger.info(f"DEBUG: Request headers: {dict(request.headers)}")
+    logger.info(f"Incoming request: {request.method} {request.url}")
     
     response = await call_next(request)
     
-    logger.info(f"DEBUG: Response status: {response.status_code}")
     return response
 
 # Pydantic models for request/response
@@ -98,7 +103,8 @@ class HealthResponse(BaseModel):
     message: str
     timestamp: str
 
-# Global thread storage (in production, use Redis or database)
+# LangGraph's MemorySaver handles thread persistence automatically
+# We only need to track active threads for API responses
 active_threads: Dict[str, List[ChatMessage]] = {}
 
 @app.get("/", response_model=dict)
@@ -130,7 +136,7 @@ async def chat_endpoint(request: ChatRequest):
     Main chat endpoint that processes user queries through the multi-agent system.
     """
     try:
-        logger.info(f"DEBUG: Received chat request - Query: {request.user_query}")
+        logger.info("Received chat request")
         
         # Generate thread ID if not provided
         thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
@@ -143,19 +149,16 @@ async def chat_endpoint(request: ChatRequest):
         if request.chat_history:
             active_threads[thread_id].extend(request.chat_history)
         
-        # Add user message to history
+        # Add user message to thread for API response tracking
         user_message = ChatMessage(role="user", content=request.user_query)
         active_threads[thread_id].append(user_message)
         
-        # Call the multi-agent orchestrator
-        logger.info(f"DEBUG: Calling multi-agent orchestrator")
+        # Call the multi-agent orchestrator - LangGraph handles memory automatically
         result = await asyncio.to_thread(
             run_multi_agent_query, 
             request.user_query, 
             thread_id
         )
-        
-        logger.info(f"DEBUG: Multi-agent result: {result}")
         
         if not result or "synthesized_answer" not in result:
             raise HTTPException(
@@ -182,11 +185,11 @@ async def chat_endpoint(request: ChatRequest):
             timestamp=datetime.now().isoformat()
         )
         
-        logger.info(f"DEBUG: Sending response back to frontend")
+        logger.info("Chat response generated successfully")
         return response
         
     except Exception as e:
-        logger.error(f"DEBUG: Error in chat endpoint: {str(e)}")
+        logger.error(f"Error in chat endpoint: {str(e)}")
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {str(e)}"
@@ -199,7 +202,7 @@ async def chat_stream_endpoint(request: ChatRequest):
     """
     async def generate_stream():
         try:
-            logger.info(f"DEBUG: Received streaming chat request - Query: {request.user_query}")
+            logger.info("Received streaming chat request")
             
             # Generate thread ID if not provided
             thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
@@ -212,7 +215,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             if request.chat_history:
                 active_threads[thread_id].extend(request.chat_history)
             
-            # Add user message to history
+            # Add user message to thread for API response tracking
             user_message = ChatMessage(role="user", content=request.user_query)
             active_threads[thread_id].append(user_message)
             
@@ -252,10 +255,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Erol Güngör', 'message': 'Erol Güngör hazırlanıyor...'})}\n\n"
             yield f"data: {json.dumps({'type': 'agent_start', 'agent': 'Cemil Meriç', 'message': 'Cemil Meriç hazırlanıyor...'})}\n\n"
             
-            # Start the orchestrator in background and send periodic updates
-            logger.info(f"DEBUG: Calling multi-agent orchestrator for streaming")
-            
-            # Start orchestrator task
+            # Start orchestrator task - LangGraph handles memory automatically
             orchestrator_task = asyncio.create_task(
                 asyncio.to_thread(run_multi_agent_query, request.user_query, thread_id)
             )
@@ -281,8 +281,6 @@ async def chat_stream_endpoint(request: ChatRequest):
             
             # Get the final result
             result = await orchestrator_task
-            
-            logger.info(f"DEBUG: Multi-agent streaming result: {result}")
             
             if not result or "synthesized_answer" not in result:
                 yield f"data: {json.dumps({'type': 'error', 'message': 'Multi-agent system failed to generate response'})}\n\n"
@@ -320,7 +318,7 @@ async def chat_stream_endpoint(request: ChatRequest):
             yield f"data: {json.dumps({'type': 'complete', 'synthesized_answer': synthesized_answer, 'agent_responses': agent_responses, 'sources': sources, 'thread_id': thread_id, 'timestamp': datetime.now().isoformat()})}\n\n"
             
         except Exception as e:
-            logger.error(f"DEBUG: Error in streaming endpoint: {str(e)}")
+            logger.error(f"Error in streaming endpoint: {str(e)}")
             yield f"data: {json.dumps({'type': 'error', 'message': f'Streaming error: {str(e)}'})}\n\n"
     
     return StreamingResponse(
@@ -363,7 +361,7 @@ async def get_tracing_status():
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
-        logger.error(f"DEBUG: Error getting tracing status: {str(e)}")
+        logger.error(f"Error getting tracing status: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/tracing/export/{session_id}")
@@ -377,13 +375,13 @@ async def export_traces(session_id: str):
             "traces": traces
         }
     except Exception as e:
-        logger.error(f"DEBUG: Error exporting traces: {str(e)}")
+        logger.error(f"Error exporting traces: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Error handlers
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
-    logger.error(f"DEBUG: HTTP exception: {exc.status_code} - {exc.detail}")
+    logger.error(f"HTTP exception: {exc.status_code} - {exc.detail}")
     return JSONResponse(
         status_code=exc.status_code,
         content={"error": f"HTTP {exc.status_code}", "detail": exc.detail}
@@ -391,7 +389,7 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    logger.error(f"DEBUG: Unhandled exception: {str(exc)}")
+    logger.error(f"Unhandled exception: {str(exc)}")
     return JSONResponse(
         status_code=500,
         content={"error": "Internal server error", "detail": str(exc)}

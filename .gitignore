@@ -13,3 +13,5 @@ build/
 .cache/
 .next/
 hf_cache/
+# Logs
+logs/

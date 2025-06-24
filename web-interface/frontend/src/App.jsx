@@ -116,8 +116,6 @@ function App() {
     setMessages(prev => [...prev, streamingMessageObj]);
 
     try {
-      console.log('DEBUG: Starting streaming request', userMessage);
-      
       // Prepare chat history for API
       const chatHistory = messages.map(msg => ({
         role: msg.type === 'user' ? 'user' : 'assistant',
@@ -126,11 +124,8 @@ function App() {
 
       // Handle streaming chunks
       const handleStreamChunk = (data) => {
-        console.log('DEBUG: Processing stream chunk:', data);
-        
         switch (data.type) {
           case 'status':
-            console.log('DEBUG: Status update:', data.message);
             break;
             
           case 'agent_start':
@@ -159,7 +154,6 @@ function App() {
             break;
             
           case 'synthesis_start':
-            console.log('DEBUG: Synthesis started:', data.message);
             break;
             
           case 'synthesis_chunk':
@@ -187,12 +181,13 @@ function App() {
             break;
             
           case 'error':
-            console.error('DEBUG: Stream error:', data.message);
+            console.error('Stream error:', data.message);
             setError(data.message);
             break;
             
           default:
-            console.log('DEBUG: Unknown stream data type:', data.type);
+            // Unknown data type, ignore
+            break;
         }
       };
 
@@ -206,7 +201,7 @@ function App() {
 
       if (!response.success) {
         // Handle API error
-        console.error('DEBUG: Streaming API call failed', response.error);
+        console.error('Streaming API call failed:', response.error);
         setError(response.error);
         
         // Update the streaming message with error
@@ -221,7 +216,7 @@ function App() {
       }
 
     } catch (error) {
-      console.error('DEBUG: Unexpected streaming error', error);
+      console.error('Unexpected streaming error:', error.message);
       setError('Beklenmeyen bir hata oluştu.');
       
       // Update the streaming message with error

@@ -23,22 +23,13 @@ export const chatAPI = {
    */
   async sendMessage(userQuery, chatHistory = [], threadId = null) {
     try {
-      console.log('DEBUG: Sending API request', { userQuery, chatHistory, threadId });
-      console.log('DEBUG: API Base URL:', API_BASE_URL);
-      
       const payload = {
         user_query: userQuery,
         chat_history: chatHistory,
         ...(threadId && { thread_id: threadId })
       };
 
-      console.log('DEBUG: Request payload:', payload);
-
       const response = await apiClient.post('/chat', payload);
-      
-      console.log('DEBUG: API response status:', response.status);
-      console.log('DEBUG: API response headers:', response.headers);
-      console.log('DEBUG: API response data:', response.data);
       
       return {
         success: true,
@@ -46,21 +37,11 @@ export const chatAPI = {
       };
       
     } catch (error) {
-      console.error('DEBUG: API request failed', error);
-      console.error('DEBUG: Error details:', {
-        message: error.message,
-        response: error.response,
-        request: error.request,
-        config: error.config
-      });
+      console.error('API request failed:', error.message);
       
       // Handle different types of errors
       if (error.response) {
         // Server responded with error status
-        console.error('DEBUG: Server error response:', error.response.data);
-        console.error('DEBUG: Server error status:', error.response.status);
-        console.error('DEBUG: Server error headers:', error.response.headers);
-        
         return {
           success: false,
           error: `Server error: ${error.response.status} - ${error.response.data?.detail || error.response.statusText}`,
@@ -68,7 +49,6 @@ export const chatAPI = {
         };
       } else if (error.request) {
         // Request was made but no response received
-        console.error('DEBUG: No response received:', error.request);
         return {
           success: false,
           error: 'Backend sunucusuna bağlanılamadı. Lütfen sunucunun çalıştığından emin olun.',
@@ -76,7 +56,6 @@ export const chatAPI = {
         };
       } else {
         // Something else happened
-        console.error('DEBUG: Request setup error:', error.message);
         return {
           success: false,
           error: `Beklenmeyen hata: ${error.message}`,
@@ -96,8 +75,6 @@ export const chatAPI = {
    */
   async sendMessageStream(userQuery, chatHistory = [], threadId = null, onChunk = null) {
     try {
-      console.log('DEBUG: Starting streaming request', { userQuery, chatHistory, threadId });
-      
       const payload = {
         user_query: userQuery,
         chat_history: chatHistory,
@@ -127,7 +104,6 @@ export const chatAPI = {
           const { done, value } = await reader.read();
           
           if (done) {
-            console.log('DEBUG: Stream completed');
             break;
           }
 
@@ -146,7 +122,6 @@ export const chatAPI = {
             if (line.startsWith('data: ')) {
               try {
                 const data = JSON.parse(line.slice(6));
-                console.log('DEBUG: Received streaming data:', data);
                 
                 // Call the chunk callback if provided
                 if (onChunk) {
@@ -158,7 +133,7 @@ export const chatAPI = {
                   finalResult = data;
                 }
               } catch (parseError) {
-                console.error('DEBUG: Failed to parse streaming data:', parseError, line);
+                console.error('Failed to parse streaming data:', parseError);
               }
             }
           }
@@ -173,7 +148,7 @@ export const chatAPI = {
       };
 
     } catch (error) {
-      console.error('DEBUG: Streaming request failed', error);
+      console.error('Streaming request failed:', error.message);
       
       return {
         success: false,
@@ -214,7 +189,7 @@ export const chatAPI = {
         data: response.data
       };
     } catch (error) {
-      console.error('DEBUG: Error fetching tracing status:', error);
+      console.error('Error fetching tracing status:', error.message);
       return {
         success: false,
         error: error.response?.data?.detail || error.message
@@ -235,7 +210,7 @@ export const chatAPI = {
         data: response.data
       };
     } catch (error) {
-      console.error('DEBUG: Error exporting traces:', error);
+      console.error('Error exporting traces:', error.message);
       return {
         success: false,
         error: error.response?.data?.detail || error.message

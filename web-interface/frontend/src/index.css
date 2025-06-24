@@ -308,7 +308,7 @@ body {
 
 /* Persona Cards Panel */
 .persona-panel {
-  width: 450px;
+  width: 400px;
   height: calc(100vh - 140px); /* Fixed height to match chat container */
   background-color: var(--bg-secondary);
   border-left: 2px solid var(--border-color);

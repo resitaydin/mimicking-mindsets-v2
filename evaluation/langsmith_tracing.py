@@ -12,6 +12,13 @@ from typing import Dict, List, Optional, Any, Callable
 from datetime import datetime
 from dataclasses import dataclass, asdict
 from threading import Lock
+import logging
+
+# Import logging configuration
+from utils.logging_config import get_logger
+
+# Initialize logger
+logger = get_logger(__name__)
 
 # LangSmith imports
 try:
@@ -20,7 +27,7 @@ try:
     LANGSMITH_AVAILABLE = True
 except ImportError:
     LANGSMITH_AVAILABLE = False
-    print("⚠️ LangSmith not available. Install with: pip install langsmith")
+    logger.warning("LangSmith not available. Install with: pip install langsmith")
 
 # LangChain callback imports
 try:
@@ -30,13 +37,44 @@ try:
     CALLBACKS_AVAILABLE = True
 except ImportError:
     CALLBACKS_AVAILABLE = False
-    print("⚠️ LangChain callbacks not available. Real-time tracing will be limited.")
-
+    logger.warning("LangChain callbacks not available. Real-time tracing will be limited.")
 
 from dotenv import load_dotenv
 load_dotenv()
 LANGSMITH_API_KEY = os.getenv("LANGSMITH_API_KEY")
-LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT")
+LANGSMITH_PROJECT = os.getenv("LANGSMITH_PROJECT", "mimicking-mindsets")
+
+# Global LangSmith client for reuse across all components
+_langsmith_client: Optional['Client'] = None
+_client_lock = Lock()
+
+def get_langsmith_client() -> Optional['Client']:
+    """Get or create the global LangSmith client (thread-safe, efficient initialization)."""
+    global _langsmith_client
+    
+    if not LANGSMITH_AVAILABLE or not LANGSMITH_API_KEY:
+        return None
+    
+    # Double-checked locking pattern for efficient thread-safe initialization
+    if _langsmith_client is None:
+        with _client_lock:
+            if _langsmith_client is None:  # Check again inside the lock
+                try:
+                    _langsmith_client = Client(
+                        api_key=LANGSMITH_API_KEY,
+                        api_url=os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
+                    )
+                    logger.info(f"LangSmith client initialized for project: {LANGSMITH_PROJECT}")
+                except Exception as e:
+                    logger.error(f"Failed to initialize LangSmith client: {e}")
+                    return None
+    
+    return _langsmith_client
+
+def initialize_langsmith() -> bool:
+    """Initialize LangSmith client at startup. Returns True if successful."""
+    client = get_langsmith_client()
+    return client is not None
 
 @dataclass
 class TraceEvent:
@@ -165,28 +203,24 @@ else:
         def __init__(self, agent_name: str, run_id: str):
             self.agent_name = agent_name
             self.run_id = run_id
-            print(f"⚠️ Real-time callbacks not available for {agent_name}")
+            logger.warning(f"Real-time callbacks not available for {agent_name}")
 
 class AgentTracingManager:
     """Manages agent tracing across the multi-agent orchestrator."""
     
     def __init__(self):
-        self.client = None
         self.active_session_id: Optional[str] = None
         self.session_traces: Dict[str, List[AgentTrace]] = {}
         self.event_callbacks: List[Callable] = []
         self.session_lock = Lock()
         
-        # Initialize LangSmith client if available
-        if LANGSMITH_AVAILABLE and LANGSMITH_API_KEY:
-            try:
-                self.client = Client(api_key=LANGSMITH_API_KEY)
-                print(f"✅ LangSmith client initialized for project: {LANGSMITH_PROJECT}")
-            except Exception as e:
-                print(f"⚠️ Failed to initialize LangSmith client: {e}")
-                self.client = None
-        else:
-            print(f"⚠️ LangSmith tracing disabled. Set LANGSMITH_API_KEY to enable.")
+        # Use global client for efficiency
+        self.client = get_langsmith_client()
+        
+        if not self.client and LANGSMITH_API_KEY:
+            logger.warning("LangSmith tracing disabled due to initialization failure")
+        elif not LANGSMITH_API_KEY:
+            logger.info("LangSmith tracing disabled. Set LANGSMITH_API_KEY to enable.")
     
     def initialize(self, session_id: Optional[str] = None) -> str:
         """Initialize tracing for a new session."""
@@ -196,7 +230,7 @@ class AgentTracingManager:
             self.active_session_id = session_id
             self.session_traces[session_id] = []
             
-        print(f"🔍 Tracing initialized for session: {session_id}")
+        logger.info(f"Tracing initialized for session: {session_id}")
         return session_id
     
     def add_event_callback(self, callback: Callable[[TraceEvent], None]):
@@ -335,7 +369,7 @@ class AgentTracingManager:
             return self.session_traces.get(session_id, []).copy()
     
     def _handle_trace_event(self, event: TraceEvent):
-        """Handle incoming trace events."""
+        """Handle incoming trace events efficiently."""
         # Store event in the appropriate trace
         with self.session_lock:
             if self.active_session_id and event.run_id:
@@ -344,28 +378,38 @@ class AgentTracingManager:
                         trace.events.append(event)
                         break
         
-        # Send to LangSmith if available
+        # Send to LangSmith if available (async for performance)
         if self.client and LANGSMITH_AVAILABLE:
-            try:
-                # Create a simple run record for LangSmith
-                run_data = {
-                    "name": f"{event.agent_name or 'system'}_{event.event_type}",
-                    "run_type": "chain",
-                    "inputs": {"message": event.message},
-                    "outputs": {"details": event.details or {}},
-                    "start_time": event.timestamp,
-                    "end_time": event.timestamp,
-                }
-                # Note: Actual LangSmith integration would use proper SDK methods
-            except Exception as e:
-                print(f"❌ Error sending to LangSmith: {e}")
+            self._send_to_langsmith_async(event)
         
-        # Notify all callbacks
+        # Notify all callbacks with error handling
         for callback in self.event_callbacks:
             try:
                 callback(event)
             except Exception as e:
-                print(f"❌ Error in event callback: {e}")
+                logger.error(f"Error in event callback: {e}")
+    
+    def _send_to_langsmith_async(self, event: TraceEvent):
+        """Send trace event to LangSmith asynchronously to avoid blocking."""
+        try:
+            # Create a properly formatted run record for LangSmith
+            run_data = {
+                "name": f"{event.agent_name or 'system'}_{event.event_type}",
+                "run_type": "chain",
+                "inputs": {"message": event.message, "run_id": event.run_id},
+                "outputs": {"details": event.details or {}, "status": event.status},
+                "start_time": event.timestamp,
+                "end_time": event.timestamp,
+                "project_name": LANGSMITH_PROJECT,
+                "tags": [event.event_type, event.agent_name] if event.agent_name else [event.event_type]
+            }
+            
+            # Note: For production, this would use proper LangSmith SDK methods
+            # self.client.create_run(**run_data)
+            logger.debug(f"Trace event prepared for LangSmith: {event.event_type}")
+            
+        except Exception as e:
+            logger.error(f"Error preparing LangSmith trace: {e}")
     
     def export_traces(self, session_id: Optional[str] = None) -> Dict[str, Any]:
         """Export traces in a JSON-serializable format."""
@@ -387,13 +431,36 @@ class AgentTracingManager:
 
 # Global tracing manager instance
 _tracing_manager: Optional[AgentTracingManager] = None
+_manager_lock = Lock()
 
 def get_tracing_manager() -> AgentTracingManager:
-    """Get or create the global tracing manager."""
+    """Get or create the global tracing manager (thread-safe, efficient initialization)."""
     global _tracing_manager
+    
+    # Double-checked locking pattern for efficient thread-safe initialization
     if _tracing_manager is None:
-        _tracing_manager = AgentTracingManager()
+        with _manager_lock:
+            if _tracing_manager is None:  # Check again inside the lock
+                _tracing_manager = AgentTracingManager()
+                logger.info("Global tracing manager initialized")
+    
     return _tracing_manager
+
+def initialize_tracing_system() -> bool:
+    """Initialize the entire tracing system at startup. Returns True if successful."""
+    try:
+        # Initialize LangSmith client
+        langsmith_ok = initialize_langsmith()
+        
+        # Initialize tracing manager
+        manager = get_tracing_manager()
+        
+        logger.info(f"Tracing system initialized - LangSmith: {'✓' if langsmith_ok else '✗'}")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Failed to initialize tracing system: {e}")
+        return False
 
 def initialize_tracing(session_id: Optional[str] = None) -> str:
     """Initialize tracing for a session."""
@@ -426,5 +493,5 @@ def get_realtime_callback(agent_name: str, run_id: str):
         return RealTimeTracingCallback(agent_name, run_id)
     else:
         # Return None if callbacks are not available
-        print(f"⚠️ Real-time callbacks not available for {agent_name}")
+        logger.warning(f"Real-time callbacks not available for {agent_name}")
         return None 

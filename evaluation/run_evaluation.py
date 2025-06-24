@@ -66,11 +66,11 @@ def create_evaluation_config() -> EvaluationConfig:
 
 def run_evaluation():
     """Run comprehensive evaluation."""
-    print("🎯 Running Comprehensive Evaluation (30 queries)")
-    print("=" * 60)
-    print("This evaluation will test the multi-agent system with 30 diverse queries")
-    print("covering Turkish cultural identity, modernization, and intellectual themes.")
-    print("=" * 60)
+    from utils.logging_config import get_evaluation_logger
+    logger = get_evaluation_logger()
+    
+    logger.info("Running Comprehensive Evaluation (30 queries)")
+    logger.info("Testing multi-agent system with diverse queries covering Turkish cultural identity, modernization, and intellectual themes")
     
     config = create_evaluation_config()
     pipeline = EvaluationPipeline(config)
@@ -78,32 +78,32 @@ def run_evaluation():
     results = pipeline.run_evaluation()
     pipeline.save_results()
     
-    print(f"\n✅ Comprehensive evaluation completed!")
-    print(f"📊 Results saved to: {config.output_dir}")
-    print(f"📄 Check detailed_results.json and summary_table.csv for full results")
+    logger.info("Comprehensive evaluation completed!")
+    logger.info(f"Results saved to: {config.output_dir}")
+    logger.info("Check detailed_results.json and summary_table.csv for full results")
 
 def main():
     """Main function."""
+    from utils.logging_config import get_evaluation_logger
+    logger = get_evaluation_logger()
     
     # Check environment
     if not os.getenv("OPENAI_API_KEY"):
-        print("❌ OPENAI_API_KEY environment variable not set!")
-        print("Please set your OpenAI API key before running the evaluation.")
-        print("\nExample:")
-        print("export OPENAI_API_KEY='your-api-key-here'")
+        logger.error("OPENAI_API_KEY environment variable not set!")
+        logger.error("Please set your OpenAI API key before running the evaluation.")
+        logger.error("Example: export OPENAI_API_KEY='your-api-key-here'")
         return
     
-    print("🤖 Multi-Agent Persona System Evaluation")
-    print("This script evaluates the system using RAGAS and LangChain evaluators with GPT-4.1-mini as judge.")
-    print()
+    logger.info("Multi-Agent Persona System Evaluation")
+    logger.info("This script evaluates the system using RAGAS and LangChain evaluators with GPT-4.1-mini as judge.")
     
     try:
         run_evaluation()
     except KeyboardInterrupt:
-        print("\n\n⚠️ Evaluation interrupted by user.")
+        logger.warning("Evaluation interrupted by user.")
     except Exception as e:
-        print(f"\n❌ Evaluation failed: {str(e)}")
-        print("Please check your setup and try again.")
+        logger.error(f"Evaluation failed: {str(e)}")
+        logger.error("Please check your setup and try again.")
 
 if __name__ == "__main__":
     main() 

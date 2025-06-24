@@ -76,8 +76,6 @@ def test_both_personas():
         persona_info = persona_data["info"]
         
         print(f"\n{'='*20} TESTING {persona_info['name'].upper()} {'='*20}")
-        print(f"📅 Years: {persona_info['years']}")
-        print(f"🎯 Expertise: {', '.join(persona_info['expertise_areas'])}")
         
         for test_case in test_cases:
             print(f"\n--- {test_case['name']} ---")
