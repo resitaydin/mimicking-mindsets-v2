@@ -10,6 +10,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 import torch
 import os
+from langchain_core.prompts import ChatPromptTemplate
 
 # Import persona prompts
 from .persona_prompts import get_persona_system_prompt, get_persona_info, list_available_personas
@@ -23,7 +24,7 @@ logger = get_agent_logger()
 # --- Configuration ---
 EMBEDDING_MODEL_NAME = "BAAI/bge-m3"
 EMBEDDING_DIMENSION = 1024
-QDRANT_HOST = "my-qdrant-instance"
+QDRANT_HOST = "localhost"
 QDRANT_PORT = 6333
 
 # Connection pool configuration
@@ -111,7 +112,14 @@ def create_web_search_tool():
     # Wrap it with debug functionality
     @tool
     def web_search(query: str) -> str:
-        """Dahili bilgi yetersiz veya güncel olmadığında güncel bilgiler için internet araması yapar. Bunu son dönem olayları, güncel istatistikler veya kişinin bilgi tabanında olmayan konular için kullanın."""
+        """GÜNCEL BİLGİLER İÇİN İNTERNET ARAMASI - Bu aracı şu durumlarda MUTLAKA kullan:
+        - Son dönem olayları ve gelişmeler hakkında sorular
+        - Güncel istatistikler ve veriler gerektiğinde  
+        - 2023 sonrası olaylar hakkında sorular
+        - Kendi bilgi tabanında olmayan güncel konular
+        - Modern teknoloji, politika, sosyal gelişmeler
+        
+        Bu araç güncel internet kaynaklarından bilgi getirir ve yanıtını zenginleştirir."""
         
         try:
             results = base_search.run(query)
@@ -137,13 +145,20 @@ def create_internal_knowledge_search_tool(
     
     @tool
     def internal_knowledge_search(query: str) -> str:
-        """Belirtilen sorgu için kişinin dahili bilgi tabanından ilgili bilgileri arar.
+        """KENDİ ESERLERİNDEN BİLGİ ARAMA - Bu aracı şu durumlarda MUTLAKA kullan:
+        - Her soruya yanıt vermeye başlamadan ÖNCE
+        - Kendi görüşlerin ve eserlerinden alıntılar için
+        - Teorik açıklamalar ve kavramsal çerçeve için
+        - Geçmiş çalışmalarındaki benzer konular için
+        - Özgün bakış açın ve metodolojin için
+        
+        Bu araç kendi eserlerinden ve bilgi tabanından en ilgili bilgileri getirir.
         
         Args:
-            query: Kişinin eserlerinden ve bilgisinden ilgili bilgi bulmak için arama sorgusu.
+            query: Kendi eserlerinden aranacak konu veya kavram
             
         Returns:
-            Kişinin bilgi tabanından kaynak bilgileri ile birlikte alınan metin parçaları.
+            Kendi bilgi tabanından kaynak bilgileri ile birlikte alınan metin parçaları.
         """
         # Get connection pool and client
         pool = get_qdrant_pool()
@@ -162,7 +177,7 @@ def create_internal_knowledge_search_tool(
             )
             
             if not search_results:
-                return f"{persona_name}'nin bilgi tabanında '{query}' sorgusu için ilgili bilgi bulunamadı."
+                return f"{persona_name}'nin bilgi tabanında '{query}' sorgusu için ilgili bilgi bulunamadı. Başka anahtar kelimeler deneyin."
             
             # Format results
             formatted_results = []
@@ -191,7 +206,7 @@ def create_internal_knowledge_search_tool(
     
     # Set the tool name to be persona-specific
     internal_knowledge_search.name = f"internal_knowledge_search_{persona_key}"
-    internal_knowledge_search.description = f"{persona_name}'nin dahili bilgi tabanında sorguya uygun bilgileri arar. {persona_name} olarak yanıt verirken bu sizin birincil bilgi kaynağınız olmalıdır."
+    internal_knowledge_search.description = f"KENDİ ESERLERİNDEN BİLGİ ARAMA - {persona_name} olarak her yanıta başlamadan önce MUTLAKA kullan. Kendi bilgi tabanından ilgili bilgileri getirir."
     
     return internal_knowledge_search
 
@@ -234,16 +249,23 @@ def create_persona_agent(
     tools = [internal_knowledge_tool, web_search_tool]
     
     # Get the complete system prompt from the new module
-    system_prompt = get_persona_system_prompt(persona_key)
+    system_prompt_content = get_persona_system_prompt(persona_key)
     
-    # Create the react agent
+    # Create a proper prompt template for LangGraph
+    system_prompt = ChatPromptTemplate.from_messages([
+        ("system", system_prompt_content),
+        ("placeholder", "{messages}"),
+    ])
+    
+    # Create the react agent with explicit prompt
     agent = create_react_agent(
         model=llm,
         tools=tools,
         prompt=system_prompt
     )
     
-    logger.info(f"Successfully created {persona_name} agent")
+    logger.info(f"Successfully created {persona_name} agent with {len(tools)} tools")
+    logger.info(f"Available tools: {[tool.name for tool in tools]}")
     return agent
 
 # --- Testing Functions ---

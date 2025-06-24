@@ -5,6 +5,7 @@ Provides structured logging with appropriate levels for production deployment.
 
 import logging
 import sys
+import os
 from datetime import datetime
 from pathlib import Path
 
@@ -47,15 +48,22 @@ def setup_logger(name: str, level: str = 'INFO', log_to_file: bool = True) -> lo
         datefmt='%Y-%m-%d %H:%M:%S'
     )
     
-    # Console handler
-    console_handler = logging.StreamHandler(sys.stdout)
+    # Console handler with UTF-8 encoding for Windows compatibility
+    # Fix Unicode encoding issues on Windows
+    if os.name == 'nt':  # Windows
+        # Use UTF-8 encoding for Windows console
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.stream.reconfigure(encoding='utf-8', errors='replace')
+    else:
+        console_handler = logging.StreamHandler(sys.stdout)
+    
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
     
-    # File handler (if requested)
+    # File handler (if requested) - always use UTF-8 encoding
     if log_to_file:
         log_file = LOGS_DIR / f"{name.replace('.', '_')}.log"
-        file_handler = logging.FileHandler(log_file)
+        file_handler = logging.FileHandler(log_file, encoding='utf-8')
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
     

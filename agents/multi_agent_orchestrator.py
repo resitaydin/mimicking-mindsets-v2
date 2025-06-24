@@ -89,14 +89,26 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Update trace status
         update_agent_trace(trace_id, "Sorgu analiz ediliyor...")
         
-        # Use agent-specific history that only contains this agent's conversation with the user
+        # Use agent-specific history but LIMIT IT to prevent context dilution
         erol_specific_history = state.get("erol_gungor_history", [])
         
-        # Add the current user query
-        current_message = HumanMessage(content=state["user_query"])
+        # Keep only the last 2 exchanges (4 messages max) to prevent tool instruction dilution
+        if len(erol_specific_history) > 4:
+            erol_specific_history = erol_specific_history[-4:]
+            logger.info(f"Trimmed Erol Güngör history to last 4 messages to maintain tool usage")
+        
+        # Add tool usage reminder to the current query to ensure it's always visible
+        enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
+Bu soruya yanıt vermeden önce MUTLAKA:
+1. internal_knowledge_search_erol_gungor aracını kullan
+2. Gerekirse web_search aracını da kullan
+
+Kullanıcı Sorusu: {state["user_query"]}"""
+        
+        current_message = HumanMessage(content=enhanced_query)
         messages = erol_specific_history + [current_message]
         
-        logger.info(f"Erol Güngör agent using {len(messages)} messages (agent-specific history)")
+        logger.info(f"Erol Güngör agent using {len(messages)} messages (limited history + tool reminder)")
         
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
@@ -121,13 +133,14 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Complete trace
         complete_agent_trace(trace_id, response_text)
         
-        # Update agent-specific history with user query and agent response
+        # Update agent-specific history with ORIGINAL user query (not enhanced) and agent response
+        original_message = HumanMessage(content=state["user_query"])
         agent_response = AIMessage(content=response_text) if response_text else AIMessage(content="Yanıt alınamadı")
         
         return {
             "erol_gungor_agent_output": result,
             "erol_trace_id": trace_id,
-            "erol_gungor_history": [current_message, agent_response]  # Update agent-specific history
+            "erol_gungor_history": [original_message, agent_response]  # Store original query in history
         }
         
     except Exception as e:
@@ -135,13 +148,13 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         complete_agent_trace(trace_id, "", str(e))
         
         # Update history even on error
-        current_message = HumanMessage(content=state["user_query"])
+        original_message = HumanMessage(content=state["user_query"])
         error_response = AIMessage(content=f"Erol Güngör ajanı hatası: {str(e)}")
         
         return {
             "erol_gungor_agent_output": {"error": f"Erol Güngör ajanı hatası: {str(e)}"},
             "erol_trace_id": trace_id,
-            "erol_gungor_history": [current_message, error_response]
+            "erol_gungor_history": [original_message, error_response]
         }
 
 def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
@@ -169,14 +182,26 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Update trace status
         update_agent_trace(trace_id, "Felsefi çerçeve oluşturuluyor...")
         
-        # Use agent-specific history that only contains this agent's conversation with the user
+        # Use agent-specific history but LIMIT IT to prevent context dilution
         cemil_specific_history = state.get("cemil_meric_history", [])
         
-        # Add the current user query
-        current_message = HumanMessage(content=state["user_query"])
+        # Keep only the last 2 exchanges (4 messages max) to prevent tool instruction dilution
+        if len(cemil_specific_history) > 4:
+            cemil_specific_history = cemil_specific_history[-4:]
+            logger.info(f"Trimmed Cemil Meriç history to last 4 messages to maintain tool usage")
+        
+        # Add tool usage reminder to the current query to ensure it's always visible
+        enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
+Bu soruya yanıt vermeden önce MUTLAKA:
+1. internal_knowledge_search_cemil_meric aracını kullan
+2. Gerekirse web_search aracını da kullan
+
+Kullanıcı Sorusu: {state["user_query"]}"""
+        
+        current_message = HumanMessage(content=enhanced_query)
         messages = cemil_specific_history + [current_message]
         
-        logger.info(f"Cemil Meriç agent using {len(messages)} messages (agent-specific history)")
+        logger.info(f"Cemil Meriç agent using {len(messages)} messages (limited history + tool reminder)")
         
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
@@ -201,13 +226,14 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Complete trace
         complete_agent_trace(trace_id, response_text)
         
-        # Update agent-specific history with user query and agent response
+        # Update agent-specific history with ORIGINAL user query (not enhanced) and agent response
+        original_message = HumanMessage(content=state["user_query"])
         agent_response = AIMessage(content=response_text) if response_text else AIMessage(content="Yanıt alınamadı")
         
         return {
             "cemil_meric_agent_output": result,
             "cemil_trace_id": trace_id,
-            "cemil_meric_history": [current_message, agent_response]  # Update agent-specific history
+            "cemil_meric_history": [original_message, agent_response]  # Store original query in history
         }
         
     except Exception as e:
@@ -215,13 +241,13 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         complete_agent_trace(trace_id, "", str(e))
         
         # Update history even on error
-        current_message = HumanMessage(content=state["user_query"])
+        original_message = HumanMessage(content=state["user_query"])
         error_response = AIMessage(content=f"Cemil Meriç ajanı hatası: {str(e)}")
         
         return {
             "cemil_meric_agent_output": {"error": f"Cemil Meriç ajanı hatası: {str(e)}"},
             "cemil_trace_id": trace_id,
-            "cemil_meric_history": [current_message, error_response]
+            "cemil_meric_history": [original_message, error_response]
         }
 
 def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
