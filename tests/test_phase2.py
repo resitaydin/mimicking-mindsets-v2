@@ -13,7 +13,7 @@ from langchain_core.messages import HumanMessage
 from agents.multi_agent_orchestrator import create_orchestrator, run_multi_agent_query
 
 def test_multi_agent_orchestration():
-    """Multi-agent orchestration sistemini test eder."""
+    """Tests the multi-agent orchestration system."""
     
     load_dotenv()
     
@@ -125,7 +125,7 @@ def test_multi_agent_orchestration():
     print("- Debug çıktıları ile süreç izlendi")
 
 def test_convenience_function():
-    """convenience fonksiyonunu test eder."""
+    """Tests the convenience function."""
     
     print(f"\n🔧 convenience Fonksiyonu Testi")
     print("=" * 40)

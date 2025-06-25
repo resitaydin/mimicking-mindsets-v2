@@ -1,16 +1,16 @@
 """
 Phase 2: Multi-Agent Orchestration with LangGraph
 
-Bu modül, iki persona ajanının (Erol Güngör ve Cemil Meriç) paralel çalışmasını koordine eden
-çok-ajanli orkestrasyon sistemini içerir. LangGraph kullanarak tool node'ları ve conditional
-edge'leri destekler.
+This module coordinates the parallel execution of two persona agents (Erol Güngör and Cemil Meriç)
+in a multi-agent orchestration system. Supports tool nodes and conditional
+edges using LangGraph.
 
-Bu system şu bileşenleri içerir:
-- Graph State: Tüm ajanların durumunu takip eden TypedDict
-- Persona Agent Nodes: Her persona için ayrı node'lar
-- Tool Nodes: Her ajanın tool çağrılarını yöneten node'lar
-- Synthesizer Node: Ajanların çıktılarını birleştiren node
-- Memory Node: Sohbet geçmişini güncelleyen node
+This system includes the following components:
+- Graph State: TypedDict that tracks the state of all agents
+- Persona Agent Nodes: Separate nodes for each persona
+- Tool Nodes: Nodes that manage tool calls for each agent
+- Synthesizer Node: Node that combines agent outputs
+- Memory Node: Node that updates chat history
 - LangSmith Tracing: Comprehensive agent execution tracing
 """
 
@@ -43,7 +43,7 @@ logger = get_orchestrator_logger()
 # --- Graph State Definition ---
 
 class GraphState(TypedDict):
-    """LangGraph için durum yönetimi."""
+    """State management for LangGraph."""
     user_query: str
     erol_gungor_agent_output: Optional[Dict[str, Any]]
     cemil_meric_agent_output: Optional[Dict[str, Any]]
@@ -65,7 +65,7 @@ class GraphState(TypedDict):
 # --- Node Functions ---
 
 def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
-    """Erol Güngör ajanını çalıştıran node."""
+    """Node that runs the Erol Güngör agent."""
     
     # Lazy import to avoid circular dependency
     from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
@@ -96,11 +96,11 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         
         # Add tool usage reminder to the current query to ensure it's always visible
         enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
-Bu soruya yanıt vermeden önce MUTLAKA:
-1. internal_knowledge_search_erol_gungor aracını kullan
-2. Gerekirse web_search aracını da kullan
+        Bu soruya yanıt vermeden önce MUTLAKA:
+        1. internal_knowledge_search_erol_gungor aracını kullan
+        2. Gerekirse web_search aracını da kullan
 
-Kullanıcı Sorusu: {state["user_query"]}"""
+        Kullanıcı Sorusu: {state["user_query"]}"""
         
         current_message = HumanMessage(content=enhanced_query)
         messages = erol_specific_history + [current_message]
@@ -151,7 +151,7 @@ Kullanıcı Sorusu: {state["user_query"]}"""
         }
 
 def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
-    """Cemil Meriç ajanını çalıştıran node."""
+    """Node that runs the Cemil Meriç agent."""
     
     # Lazy import to avoid circular dependency
     from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
@@ -182,11 +182,11 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         
         # Add tool usage reminder to the current query to ensure it's always visible
         enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
-Bu soruya yanıt vermeden önce MUTLAKA:
-1. internal_knowledge_search_cemil_meric aracını kullan
-2. Gerekirse web_search aracını da kullan
+        Bu soruya yanıt vermeden önce MUTLAKA:
+        1. internal_knowledge_search_cemil_meric aracını kullan
+        2. Gerekirse web_search aracını da kullan
 
-Kullanıcı Sorusu: {state["user_query"]}"""
+        Kullanıcı Sorusu: {state["user_query"]}"""
         
         current_message = HumanMessage(content=enhanced_query)
         messages = cemil_specific_history + [current_message]
@@ -237,7 +237,7 @@ Kullanıcı Sorusu: {state["user_query"]}"""
         }
 
 def join_agents_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
-    """İki ajanın tamamlanmasını bekleyen ara node."""
+    """Intermediate node waiting for both agents to complete."""
     
     erol_output = state.get("erol_gungor_agent_output")
     cemil_output = state.get("cemil_meric_agent_output")
@@ -283,7 +283,7 @@ def extract_sources_from_messages(messages, agent_name=None):
     return sources
 
 def synthesize_response_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
-    """İki ajanın yanıtlarını birleştiren node."""
+    """Node that synthesizes responses from both agents."""
     
     logger.info("Starting synthesis node")
     
@@ -343,27 +343,27 @@ def synthesize_response_node(state: GraphState, config: RunnableConfig) -> Dict[
         history_context += "\nBu bağlamı göz önünde bulundurarak yanıt ver.\n"
     
     synthesis_prompt = f"""Sen, Türk entelektüel geleneğini anlayan ve farklı bakış açılarını sentezleyebilen bir asistansın.
-{history_context}
-Kullanıcı Sorusu: {state['user_query']}
+    {history_context}
+    Kullanıcı Sorusu: {state['user_query']}
 
-Erol Güngör'ün Yanıtı:
-{erol_response}
+    Erol Güngör'ün Yanıtı:
+    {erol_response}
 
-Cemil Meriç'in Yanıtı:
-{cemil_response}
+    Cemil Meriç'in Yanıtı:
+    {cemil_response}
 
-Görevin: Bu iki entelektüelin yanıtlarını birleştirerek tek bir tutarlı, kapsamlı yanıt oluşturmak. 
+    Görevin: Bu iki entelektüelin yanıtlarını birleştirerek tek bir tutarlı, kapsamlı yanıt oluşturmak. 
 
-Sentez yaparken:
-1. Her iki perspektifi de saygıyla dahil et
-2. Ortak noktaları vurgula
-3. Farklı görüşleri de belirt ve bunları tamamlayıcı olarak sun
-4. Tekrarları önle
-5. Akıcı, tutarlı bir metin oluştur
-6. Her iki entelektüelin katkısını acknowledge et
-7. Eğer önceki sohbet bağlamı varsa, ona uygun şekilde yanıt ver
+    Sentez yaparken:
+    1. Her iki perspektifi de saygıyla dahil et
+    2. Ortak noktaları vurgula
+    3. Farklı görüşleri de belirt ve bunları tamamlayıcı olarak sun
+    4. Tekrarları önle
+    5. Akıcı, tutarlı bir metin oluştur
+    6. Her iki entelektüelin katkısını acknowledge et
+    7. Eğer önceki sohbet bağlamı varsa, ona uygun şekilde yanıt ver
 
-Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
+    Başlıklar kullanma, doğrudan kapsamlı bir yanıt ver."""
     
     try:
         synthesis_result = llm.invoke(synthesis_prompt)
@@ -414,7 +414,7 @@ class MultiAgentOrchestrator:
     """Multi-agent orchestration system using LangGraph."""
     
     def __init__(self):
-        """Orchestrator'ı başlatır."""
+        """Initializes the orchestrator."""
         self.graph = None
         self.qdrant_client = None
         self.embedding_model = None
@@ -422,7 +422,7 @@ class MultiAgentOrchestrator:
         self.agents = {}
         
     def initialize(self):
-        """Tüm bileşenleri başlatır."""
+        """Initializes all components."""
         
         logger.info("Initializing Multi-Agent Orchestrator")
         
@@ -459,7 +459,7 @@ class MultiAgentOrchestrator:
         logger.info("Multi-Agent Orchestrator initialized successfully")
     
     def _build_graph(self):
-        """LangGraph workflow'unu oluşturur."""
+        """Creates the LangGraph workflow."""
         
         # Create the state graph
         workflow = StateGraph(GraphState)
@@ -490,7 +490,7 @@ class MultiAgentOrchestrator:
         logger.info("Graph compiled successfully")
     
     def invoke(self, user_query: str, thread_id: str = "default") -> Dict[str, Any]:
-        """Orchestrator'ı çalıştırır using LangGraph's built-in memory management."""
+        """Runs the orchestrator using LangGraph's built-in memory management."""
         
         logger.info(f"Invoking Multi-Agent Orchestrator for thread: {thread_id}")
         
@@ -559,14 +559,14 @@ def get_global_orchestrator() -> MultiAgentOrchestrator:
     return _global_orchestrator
 
 def create_orchestrator() -> MultiAgentOrchestrator:
-    """Yeni bir Multi-Agent Orchestrator oluşturur ve başlatır."""
+    """Creates and initializes a new Multi-Agent Orchestrator."""
     
     orchestrator = MultiAgentOrchestrator()
     orchestrator.initialize()
     return orchestrator
 
 def run_multi_agent_query(query: str, thread_id: str = "default") -> Dict[str, Any]:
-    """Tek seferlik multi-agent sorgu çalıştırır - uses LangGraph's built-in memory management."""
+    """Runs a one-time multi-agent query - uses LangGraph's built-in memory management."""
     
     # Use the global orchestrator instead of creating a new one each time
     # This dramatically improves performance by avoiding model reloading
