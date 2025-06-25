@@ -51,7 +51,8 @@ def extract_text_from_pdf(pdf_path: str) -> str:
             text += page.get_text() + "\n"  # Add newline to separate page contents
         doc.close()
     except Exception as e:
-        print(f"Error reading PDF {pdf_path}: {e}")
+        # Silent error handling - log to stderr if needed
+        pass
     return text
 
 def preprocess_turkish_text(text: str) -> str:
@@ -117,40 +118,29 @@ def build_knowledge_base_for_persona(
     persona_folder = os.path.join(BASE_WORKS_DIR, persona_config["folder_name"])
     collection_name = persona_config["qdrant_collection_name"]
 
-    print(f"\n--- Processing Persona: {persona_name} ---")
-    print(f"Source folder: {persona_folder}")
-    print(f"Qdrant collection: {collection_name}")
-
     # 1. Create Qdrant collection (if it doesn't exist)
     try:
         # Check if collection exists and delete it if it does (to replicate recreate_collection behavior)
         if qdrant_client.collection_exists(collection_name=collection_name):
             qdrant_client.delete_collection(collection_name=collection_name)
-            print(f"Existing collection '{collection_name}' deleted.")
         
         # Create new collection
         qdrant_client.create_collection(
             collection_name=collection_name,
             vectors_config=models.VectorParams(size=EMBEDDING_DIMENSION, distance=models.Distance.COSINE)
         )
-        print(f"Collection '{collection_name}' created successfully.")
     except Exception as e:
-        print(f"Error creating Qdrant collection '{collection_name}': {e}")
         # Check if collection already exists with compatible config
         try:
             qdrant_client.get_collection(collection_name=collection_name)
-            print(f"Collection '{collection_name}' already exists. Proceeding...")
         except Exception as e_get:
-            print(f"Failed to get collection info for '{collection_name}': {e_get}. Aborting for this persona.")
             return
 
 
     # 2. Text Collection & Digitization (PDF reading)
     pdf_files = get_pdf_files(persona_folder)
     if not pdf_files:
-        print(f"No PDF files found in {persona_folder}. Skipping persona.")
         return
-    print(f"Found {len(pdf_files)} PDF files for {persona_name}.")
 
     all_chunks_with_metadata = []
 
@@ -158,7 +148,6 @@ def build_knowledge_base_for_persona(
         raw_text = extract_text_from_pdf(pdf_path)
 
         if not raw_text.strip():
-            print(f"    No text extracted from {os.path.basename(pdf_path)}. Skipping.")
             continue
 
         # 3. Text Cleaning & Preprocessing
@@ -166,7 +155,6 @@ def build_knowledge_base_for_persona(
 
         # 4. Chunking
         chunks = text_splitter.split_text(cleaned_text)
-        print(f"    Split into {len(chunks)} chunks.")
 
         for i, chunk_text in enumerate(chunks):
             all_chunks_with_metadata.append({
@@ -176,20 +164,14 @@ def build_knowledge_base_for_persona(
             })
 
     if not all_chunks_with_metadata:
-        print(f"No text chunks generated for {persona_name}. Nothing to embed or store.")
         return
 
-    print(f"Generated a total of {len(all_chunks_with_metadata)} text chunks for {persona_name}.")
-
     # 5. Embedding Generation (in batches for efficiency)
-    print("Generating embeddings...")
     texts_to_embed = [item["text"] for item in all_chunks_with_metadata]
     
-    embeddings = embedding_model.encode(texts_to_embed, show_progress_bar=True, batch_size=16)
-    print(f"Generated {len(embeddings)} embeddings.")
+    embeddings = embedding_model.encode(texts_to_embed, show_progress_bar=False, batch_size=16)
 
     # 6. Vector Database (Knowledge Base) Storage
-    print(f"Storing chunks and embeddings in Qdrant collection '{collection_name}'...")
     points_to_upsert = []
     for i, item in enumerate(all_chunks_with_metadata):
         points_to_upsert.append(
@@ -212,41 +194,23 @@ def build_knowledge_base_for_persona(
         try:
             qdrant_client.upsert(collection_name=collection_name, points=batch, wait=True)
         except Exception as e:
-            print(f"Error upserting batch to Qdrant: {e}")
             # Optionally, add retry logic or save failed batches
-
-    print(f"Successfully stored {len(points_to_upsert)} items in '{collection_name}'.")
-    print(f"--- Finished processing Persona: {persona_name} ---")
+            break
 
 
 if __name__ == "__main__":
-    print("Starting Phase 1: Knowledge Base Construction...")
-    
     # Initialize Qdrant Client
     try:
         qdrant_client = QdrantClient(host=QDRANT_HOST, port=QDRANT_PORT)
         qdrant_client.get_collections() # Check connection
-        print(f"Successfully connected to Qdrant at {QDRANT_HOST}:{QDRANT_PORT}")
     except Exception as e:
-        print(f"Could not connect to Qdrant: {e}")
-        print("Please ensure Qdrant is running and accessible.")
         exit(1)
 
     # Initialize Embedding Model
-    print(f"Loading embedding model: {EMBEDDING_MODEL_NAME}...")
     try:
-        if torch.cuda.is_available():
-            device = 'cuda'
-            print(f"CUDA is available. Using GPU: {torch.cuda.get_device_name(0)}")
-        else:
-            device = 'cpu'
-            print("CUDA is not available. Using CPU.")
+        device = 'cuda' if torch.cuda.is_available() else 'cpu'
         embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
-        print("Embedding model loaded successfully.")
     except Exception as e:
-        print(f"Error loading embedding model '{EMBEDDING_MODEL_NAME}': {e}")
-        print("Make sure you have an internet connection to download the model for the first time,")
-        print("and that 'sentence-transformers' and its dependencies (like PyTorch) are correctly installed.")
         exit(1)
 
 
@@ -265,4 +229,3 @@ if __name__ == "__main__":
             text_splitter
         )
 
-    print("\nPhase 1: Knowledge Base Construction completed for all personas.")

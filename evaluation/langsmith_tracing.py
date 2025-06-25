@@ -64,7 +64,6 @@ def get_langsmith_client() -> Optional['Client']:
                         api_key=LANGSMITH_API_KEY,
                         api_url=os.getenv("LANGSMITH_ENDPOINT", "https://api.smith.langchain.com")
                     )
-                    logger.info(f"LangSmith client initialized for project: {LANGSMITH_PROJECT}")
                 except Exception as e:
                     logger.error(f"Failed to initialize LangSmith client: {e}")
                     return None

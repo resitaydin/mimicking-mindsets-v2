@@ -10,45 +10,45 @@ from pathlib import Path
 
 def check_dependencies():
     """Check if required dependencies are installed."""
+    print("Checking dependencies...")
     try:
         import fastapi
         import uvicorn
-        print("FastAPI dependencies found")
+        print("✓ FastAPI and Uvicorn available")
     except ImportError as e:
-        print(f"Missing dependencies: {e}")
-        print("Please install dependencies with: pip install -r requirements.txt")
+        print(f"✗ FastAPI/Uvicorn import failed: {e}")
         return False
     
     try:
         from agents.multi_agent_orchestrator import run_multi_agent_query
-        print("Multi-agent orchestrator found")
+        print("✓ Multi-agent orchestrator available")
     except ImportError as e:
-        print(f"Multi-agent orchestrator not found: {e}")
-        print("Please ensure agents/multi_agent_orchestrator.py is in the current directory")
+        print(f"✗ Multi-agent orchestrator import failed: {e}")
         return False
     
     return True
 
 def main():
-    print("Starting Mimicking Mindsets Backend Server...")
+    print("Starting Mimicking Mindsets Backend...")
     
     # Ensure we are running inside the same directory as this script (web-interface)
     script_dir = Path(__file__).resolve().parent
+    print(f"Script directory: {script_dir}")
     os.chdir(script_dir)
 
     # Check if api_server.py exists in this directory
     if not Path("api_server.py").exists():
-        print("ERROR: api_server.py not found alongside start_backend.py")
-        print("Please make sure api_server.py is located in the same directory as start_backend.py")
+        print("✗ api_server.py not found in current directory")
         sys.exit(1)
+    else:
+        print("✓ api_server.py found")
     
     # Check dependencies
     if not check_dependencies():
+        print("✗ Dependency check failed")
         sys.exit(1)
     
-    print("Server starting on http://localhost:8000")
-    print("API Documentation: http://localhost:8000/docs")
-    
+    print("✓ All checks passed. Starting server...")
     try:
         # Start the server
         import uvicorn
@@ -57,12 +57,13 @@ def main():
             host="0.0.0.0",
             port=8000,
             reload=True,
-            log_level="info"
+            log_level="info"  # Temporarily increase log level for debugging
         )
     except KeyboardInterrupt:
-        print("\nServer stopped by user")
+        print("\n✓ Server stopped by user")
+        pass
     except Exception as e:
-        print(f"Server error: {e}")
+        print(f"✗ Server failed to start: {e}")
         sys.exit(1)
 
 if __name__ == "__main__":

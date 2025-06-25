@@ -67,8 +67,6 @@ class GraphState(TypedDict):
 def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
     """Erol Güngör ajanını çalıştıran node."""
     
-    logger.info("Starting Erol Güngör agent node")
-    
     # Lazy import to avoid circular dependency
     from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
     
@@ -95,7 +93,6 @@ def erol_gungor_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Keep only the last 2 exchanges (4 messages max) to prevent tool instruction dilution
         if len(erol_specific_history) > 4:
             erol_specific_history = erol_specific_history[-4:]
-            logger.info(f"Trimmed Erol Güngör history to last 4 messages to maintain tool usage")
         
         # Add tool usage reminder to the current query to ensure it's always visible
         enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
@@ -108,8 +105,6 @@ Kullanıcı Sorusu: {state["user_query"]}"""
         current_message = HumanMessage(content=enhanced_query)
         messages = erol_specific_history + [current_message]
         
-        logger.info(f"Erol Güngör agent using {len(messages)} messages (limited history + tool reminder)")
-        
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
         
@@ -121,8 +116,6 @@ Kullanıcı Sorusu: {state["user_query"]}"""
             result = erol_agent.invoke({"messages": messages}, config={"callbacks": [callback]})
         else:
             result = erol_agent.invoke({"messages": messages})
-        
-        logger.info("Erol Güngör agent completed successfully")
         
         # Extract response for tracing and history update
         response_text = ""
@@ -160,8 +153,6 @@ Kullanıcı Sorusu: {state["user_query"]}"""
 def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[str, Any]:
     """Cemil Meriç ajanını çalıştıran node."""
     
-    logger.info("Starting Cemil Meriç agent node")
-    
     # Lazy import to avoid circular dependency
     from evaluation.langsmith_tracing import trace_agent_execution, update_agent_trace, complete_agent_trace, get_realtime_callback
     
@@ -188,7 +179,6 @@ def cemil_meric_agent_node(state: GraphState, config: RunnableConfig) -> Dict[st
         # Keep only the last 2 exchanges (4 messages max) to prevent tool instruction dilution
         if len(cemil_specific_history) > 4:
             cemil_specific_history = cemil_specific_history[-4:]
-            logger.info(f"Trimmed Cemil Meriç history to last 4 messages to maintain tool usage")
         
         # Add tool usage reminder to the current query to ensure it's always visible
         enhanced_query = f"""🔧 ARAÇ KULLANIM HATIRLATMASI 🔧
@@ -201,8 +191,6 @@ Kullanıcı Sorusu: {state["user_query"]}"""
         current_message = HumanMessage(content=enhanced_query)
         messages = cemil_specific_history + [current_message]
         
-        logger.info(f"Cemil Meriç agent using {len(messages)} messages (limited history + tool reminder)")
-        
         # Update trace for agent invocation
         update_agent_trace(trace_id, "Ajan çalıştırılıyor...")
         
@@ -214,8 +202,6 @@ Kullanıcı Sorusu: {state["user_query"]}"""
             result = cemil_agent.invoke({"messages": messages}, config={"callbacks": [callback]})
         else:
             result = cemil_agent.invoke({"messages": messages})
-        
-        logger.info("Cemil Meriç agent completed successfully")
         
         # Extract response for tracing and history update
         response_text = ""

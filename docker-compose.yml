@@ -21,6 +21,14 @@ services:
       - ./data:/app/data
       - ./hf_cache:/app/hf_cache
     restart: unless-stopped
+    # GPU support for CUDA acceleration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
@@ -50,6 +58,14 @@ services:
       - HUGGINGFACE_HUB_CACHE=/app/hf_cache
       - ENVIRONMENT=development
     restart: unless-stopped
+    # GPU support for CUDA acceleration  
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - mimicking-mindsets-network
 
@@ -106,6 +122,14 @@ services:
     command: uv run python knowledge-base/preprocess/build_kb.py
     profiles:
       - setup
+    # GPU support for faster knowledge base building
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - mimicking-mindsets-network
 
@@ -127,6 +151,14 @@ services:
     command: uv run python evaluation/run_evaluation.py
     profiles:
       - evaluation
+    # GPU support for faster evaluation
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
     networks:
       - mimicking-mindsets-network
 

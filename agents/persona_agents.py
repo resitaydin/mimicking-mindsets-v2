@@ -46,9 +46,7 @@ class QdrantConnectionPool:
         self._initialize_pool()
     
     def _initialize_pool(self):
-        """Initialize the connection pool with Qdrant clients."""
-        logger.info(f"Initializing Qdrant connection pool (size: {self.pool_size})")
-        
+        """Initialize the connection pool with Qdrant clients."""        
         for i in range(self.pool_size):
             try:
                 client = QdrantClient(host=self.host, port=self.port)
@@ -58,8 +56,6 @@ class QdrantConnectionPool:
             except Exception as e:
                 logger.error(f"Failed to create connection {i+1}: {e}")
                 raise
-        
-        logger.info("Qdrant connection pool initialized successfully")
     
     def get_client(self) -> QdrantClient:
         """Get a client from the pool (blocking if pool is empty)."""
@@ -123,7 +119,6 @@ def create_web_search_tool():
         
         try:
             results = base_search.run(query)
-            logger.info(f"Web search completed for query: '{query[:50]}...'")
             return results
             
         except Exception as e:
@@ -194,7 +189,6 @@ def create_internal_knowledge_search_tool(
                     f"{'='*50}"
                 )
             
-            logger.info(f"Internal knowledge search completed for {persona_name}")
             return f"{persona_name}'nin bilgi tabanından alınan bilgiler:\n\n" + "\n\n".join(formatted_results)
             
         except Exception as e:
@@ -264,16 +258,12 @@ def create_persona_agent(
         prompt=system_prompt
     )
     
-    logger.info(f"Successfully created {persona_name} agent with {len(tools)} tools")
-    logger.info(f"Available tools: {[tool.name for tool in tools]}")
     return agent
 
 # --- Testing Functions ---
 
 def initialize_components():
     """Initialize all required components with connection pooling."""
-    
-    logger.info("Starting component initialization")
     
     # Initialize Qdrant connection pool
     try:
@@ -283,8 +273,6 @@ def initialize_components():
         test_client = pool.get_client()
         try:
             collections = test_client.get_collections()
-            logger.info(f"Found {len(collections.collections)} collections in Qdrant")
-            
             # Return a client for backward compatibility (though pool will be used internally)
             qdrant_client = test_client
         finally:
@@ -297,12 +285,8 @@ def initialize_components():
     # Initialize embedding model
     try:
         device = 'cuda' if torch.cuda.is_available() else 'cpu'
-        logger.info(f"Using device: {device}")
-        if device == 'cuda':
-            logger.info(f"GPU: {torch.cuda.get_device_name(0)}")
-        
+        print(f"Using device: {device}")
         embedding_model = SentenceTransformer(EMBEDDING_MODEL_NAME, device=device)
-        logger.info(f"Embedding model loaded: {EMBEDDING_MODEL_NAME}")
     except Exception as e:
         logger.error(f"Failed to load embedding model: {e}")
         return None, None, None
@@ -314,11 +298,9 @@ def initialize_components():
             temperature=0.1,
             max_tokens=2048
         )
-        logger.info("Gemini 2.0 Flash initialized")
     except Exception as e:
         logger.error(f"Failed to initialize Gemini: {e}")
         logger.error("Make sure GOOGLE_API_KEY environment variable is set")
         return None, None, None
     
-    logger.info("All components initialized successfully")
     return qdrant_client, embedding_model, llm

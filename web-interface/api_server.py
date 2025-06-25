@@ -40,19 +40,13 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup_event():
     """Initialize the multi-agent orchestrator on server startup for optimal performance."""
-    logger.info("Starting Mimicking Mindsets API Server...")
-    logger.info("Initializing multi-agent orchestrator components...")
-    
     try:
         # Initialize tracing system first
         tracing_ok = initialize_tracing_system()
-        logger.info(f"Tracing system initialization: {'✓' if tracing_ok else '✗'}")
         
         # Initialize the global orchestrator during startup
         # This will load models, connect to databases, etc.
         orchestrator = get_global_orchestrator()
-        logger.info("Multi-agent orchestrator initialized successfully!")
-        logger.info("All models loaded and ready for fast responses")
     except Exception as e:
         logger.error(f"Failed to initialize orchestrator during startup: {str(e)}")
         logger.error("Server will still start, but first request may be slow")
@@ -71,13 +65,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add request logging middleware
+# Minimal request logging middleware - only for errors
 @app.middleware("http")
 async def log_requests(request, call_next):
-    logger.info(f"Incoming request: {request.method} {request.url}")
-    
     response = await call_next(request)
-    
     return response
 
 # Pydantic models for request/response
@@ -136,8 +127,6 @@ async def chat_endpoint(request: ChatRequest):
     Main chat endpoint that processes user queries through the multi-agent system.
     """
     try:
-        logger.info("Received chat request")
-        
         # Generate thread ID if not provided
         thread_id = request.thread_id or f"thread_{datetime.now().timestamp()}"
         
@@ -185,7 +174,6 @@ async def chat_endpoint(request: ChatRequest):
             timestamp=datetime.now().isoformat()
         )
         
-        logger.info("Chat response generated successfully")
         return response
         
     except Exception as e:
@@ -398,16 +386,10 @@ async def general_exception_handler(request, exc):
 if __name__ == "__main__":
     import uvicorn
     
-    print("🚀 Starting Mimicking Mindsets API Server...")
-    print("🔧 Components will be initialized during startup for optimal performance")
-    print("📖 API Documentation: http://localhost:8000/docs")
-    print("🌐 Frontend should connect to: http://localhost:8000")
-    print("⏳ Please wait for initialization to complete...")
-    
     uvicorn.run(
         "api_server:app",
         host="0.0.0.0",
         port=8000,
         reload=True,
-        log_level="info"
+        log_level="warning"
     ) 
