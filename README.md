@@ -8,7 +8,7 @@ This project aims to bridge the gap between historical intellectual heritage and
 
 The core of the system is a multi-agent architecture where each intellectual is represented by a distinct AI agent. These agents process queries in parallel and collaborate to produce a synthesized, dialogical answer, simulating a rich intellectual exchange.
 
-## 🏗System Architecture
+## System Architecture
 
 The system is designed as a modular, multi-agent pipeline that ensures efficient and high-quality response generation.
 
@@ -66,7 +66,7 @@ The core logic is handled by a sophisticated multi-agent system designed for col
     -   **Search the Web**: A fallback action using the **DuckDuckGo Search API** if the internal knowledge is insufficient or if the query requires contemporary information.
     -   **Generate Response**: The final action once sufficient context has been gathered.
 
-## 📊 Evaluation & Results
+## Evaluation & Results
 
 The system's performance was rigorously evaluated using a combination of quantitative metrics and qualitative expert review.
 
@@ -90,7 +90,7 @@ A collaborating history expert, **Doç. Dr. Yasemin Hoca**, reviewed the system'
 
 **LangSmith** was integrated for real-time tracing of every step in the agent and RAG pipelines, which was invaluable for debugging, optimization, and ensuring quality.
 
-## 🛠️ Technical Stack
+## Technical Stack
 
 -   **Backend**: FastAPI, LangChain, LangGraph
 -   **Frontend**: React, Nginx
@@ -99,7 +99,7 @@ A collaborating history expert, **Doç. Dr. Yasemin Hoca**, reviewed the system'
 -   **Evaluation**: RAGAS, LangSmith
 -   **DevOps**: Docker, Docker Compose, `uv`
 
-## 🚀 Running the Project
+## Running the Project
 
 The simplest way to run the entire application stack is with Docker Compose.
 
@@ -112,7 +112,7 @@ docker-compose --profile production up
 ```
 *For detailed local setup and development instructions, please refer to the `docs/` directory.*
 
-## 📄 License
+## License
 
 This project is licensed under the **MIT License**.
 
