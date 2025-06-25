@@ -43,7 +43,7 @@ The system is designed as a modular, multi-agent pipeline that ensures efficient
 5.  The individual responses are sent to a final **Synthesizer** LLM, which combines them into a single, coherent, and conversational answer.
 6.  The final response is streamed back to the user interface.
 
-## 🔬 Methodology & Implementation
+## Methodology & Implementation
 
 The project was developed in two main phases: building the knowledge foundation and implementing the intelligent agent system.
 
