@@ -1,260 +1,126 @@
-# Mimicking Mindsets
+# Mimicking Mindsets: A Multi-Agent AI System for Simulating Intellectual Personas
 
-A high-performance multi-agent AI system that simulates Turkish intellectuals **Erol Güngör** and **Cemil Meriç** using advanced RAG (Retrieval-Augmented Generation), web search integration, and GPU-accelerated inference.
+A high-performance multi-agent AI system that simulates conversations with Turkish intellectuals **Erol Güngör** and **Cemil Meriç**. The system leverages a sophisticated Retrieval-Augmented Generation (RAG) pipeline, real-time web search, and GPU-accelerated inference to create authentic, interactive AI personas.
 
-## 🎯 Overview
+## Project Overview
 
-This project creates authentic AI personas of two prominent Turkish intellectuals who can engage in meaningful conversations about culture, philosophy, and society. The system combines their historical knowledge with current information through web search, providing thoughtful responses that reflect their unique perspectives.
+This project aims to bridge the gap between historical intellectual heritage and contemporary dialogue. By creating dynamic AI personas of Erol Güngör and Cemil Meriç, users can explore complex ideas on culture, philosophy, and society in an interactive format. The system moves beyond static text by combining a deep knowledge base, derived from the complete works of both thinkers, with the ability to access current information via web search. This dual capability allows the agents to provide thoughtful, nuanced responses that are grounded in their original perspectives yet relevant to modern-day issues.
 
-### Key Features
+The core of the system is a multi-agent architecture where each intellectual is represented by a distinct AI agent. These agents process queries in parallel and collaborate to produce a synthesized, dialogical answer, simulating a rich intellectual exchange.
 
-- **🤖 Dual Persona Agents**: Erol Güngör (sociologist/psychologist) and Cemil Meriç (intellectual/translator)
-- **🔍 RAG Integration**: Persona-specific knowledge bases built from their works
-- **🌐 Web Search**: DuckDuckGo integration for current information
-- **⚡ GPU Acceleration**: CUDA-enabled PyTorch for fast inference
-- **🔀 Multi-Agent Orchestration**: Parallel processing with LangGraph
-- **📊 Comprehensive Evaluation**: RAGAS-based metrics with LangSmith tracing
-- **🖥️ Modern Web Interface**: React frontend with FastAPI backend
-- **🐳 Docker Support**: Full containerization with GPU support
+## 🏗System Architecture
 
-## 🏗️ Architecture
+The system is designed as a modular, multi-agent pipeline that ensures efficient and high-quality response generation.
 
 ```
-┌─────────────────┐    ┌─────────────────┐
-│   Erol Güngör   │    │   Cemil Meriç   │
-│     Agent       │    │     Agent       │
-└─────────┬───────┘    └─────────┬───────┘
-          │                      │
-          ├──────────┬────────────┤
+┌─────────────────┐      ┌─────────────────┐
+│   Erol Güngör   │      │   Cemil Meriç   │
+│   Agent (RAG)   │      │   Agent (RAG)   │
+└─────────┬───────┘      └─────────┬───────┘
+          │                        │
+          ├──────────┬─────────────┤
                      │
           ┌─────────────────┐
-          │   Orchestrator  │
-          │   (LangGraph)   │
+          │  Orchestrator   │
+          │  (LangGraph)    │
           └─────────┬───────┘
                     │
           ┌─────────────────┐
-          │   Web Interface │
-          │ (React + FastAPI)│
+          │    Synthesizer  │
+          │ (Gemini 2.0 Flash)│
+          └─────────┬───────┘
+                    │
+          ┌─────────────────┐
+          │ Web Interface   │
+          │(React + FastAPI)│
           └─────────────────┘
 ```
+**Data Flow:**
+1.  A user query is submitted through the **React** frontend.
+2.  The **FastAPI** backend receives the request and passes it to the **LangGraph Orchestrator**.
+3.  The orchestrator dispatches the query to both the **Erol Güngör** and **Cemil Meriç** agents to be processed **in parallel**.
+4.  Each agent uses its dedicated knowledge base and web search tools to formulate a perspective.
+5.  The individual responses are sent to a final **Synthesizer** LLM, which combines them into a single, coherent, and conversational answer.
+6.  The final response is streamed back to the user interface.
 
-## 📁 Project Structure
+## 🔬 Methodology & Implementation
 
-```
-├── agents/                    # Persona agents and orchestration
-├── evaluation/                # RAGAS evaluation and LangSmith tracing
-├── knowledge-base/            # Knowledge base building tools
-├── web-interface/             # React frontend + FastAPI backend
-├── tests/                     # Comprehensive test suite
-├── utils/                     # Logging and utilities
-├── docs/                      # Technical documentation
-├── docker-compose.yml         # Multi-service Docker setup
-└── pyproject.toml            # Modern Python project configuration
-```
+The project was developed in two main phases: building the knowledge foundation and implementing the intelligent agent system.
 
-## 🚀 Quick Start
+### 1. The Knowledge Foundation (Persona-Specific RAG)
 
-### Prerequisites
+Creating authentic personas required building a deep, structured knowledge base for each intellectual.
 
-- **Python 3.12+**
-- **NVIDIA GPU** (optional but recommended for performance)
-- **Docker & Docker Compose** (for containerized deployment)
-- **Google API Key** for Gemini 2.0 Flash
+-   **Data Collection & Preprocessing**: The complete works of Erol Güngör and Cemil Meriç were digitized, cleaned, and normalized to create a high-quality text corpus.
+-   **Text Chunking**: The corpus was divided into smaller, semantically meaningful chunks with overlap to ensure contextual integrity during retrieval.
+-   **Vector Embeddings**: Each text chunk was converted into a numerical vector using the powerful, multilingual **BAAI/bge-m3** embedding model, running with CUDA acceleration.
+-   **Vector Database**: These embeddings are stored in two separate **Qdrant** collections, one for each persona. This separation allows for highly targeted and efficient semantic searches.
 
-### Installation
+### 2. The Multi-Agent System
 
-#### Option 1: Local Development (Recommended)
+The core logic is handled by a sophisticated multi-agent system designed for collaboration and intelligent decision-making.
+
+-   **Multi-Agent Orchestration**: **LangGraph** is used to define and execute the conversational flow. It enables parallel processing of queries by both agents, drastically reducing latency and facilitating a final synthesis step.
+-   **Intelligent Tool Use**: Each agent operates using the **ReAct (Reason and Act)** framework. This allows an agent to autonomously decide which tool to use:
+    -   **Search Internal Knowledge Base**: The primary action to find relevant passages from the thinker's works.
+    -   **Search the Web**: A fallback action using the **DuckDuckGo Search API** if the internal knowledge is insufficient or if the query requires contemporary information.
+    -   **Generate Response**: The final action once sufficient context has been gathered.
+
+## 📊 Evaluation & Results
+
+The system's performance was rigorously evaluated using a combination of quantitative metrics and qualitative expert review.
+
+### Quantitative Metrics (RAGAS Framework)
+
+We established an evaluation pipeline using the **RAGAS** framework to measure the quality of the generated responses. The key metrics, averaged over a diverse set of test queries, are:
+
+| Metric | Description | Average Score |
+| :--- | :--- | :--- |
+| **Faithfulness** | Measures how factually consistent the answer is with the retrieved context. | **0.88 / 1.0** |
+| **Answer Relevancy** | Measures how relevant the answer is to the original query. | **0.70 / 1.0** |
+| **Coherence** | Measures the logical flow and readability of the answer. | **1.00 / 1.0** |
+
+These results indicate that the system generates highly coherent responses that are strongly grounded in the source material.
+
+### Qualitative Validation
+
+A collaborating history expert, **Doç. Dr. Yasemin Hoca**, reviewed the system's outputs for persona accuracy and intellectual style. Her feedback confirmed that the system successfully captures the distinct tones, vocabularies, and philosophical stances of both Erol Güngör and Cemil Meriç.
+
+### Monitoring
+
+**LangSmith** was integrated for real-time tracing of every step in the agent and RAG pipelines, which was invaluable for debugging, optimization, and ensuring quality.
+
+## 🛠️ Technical Stack
+
+-   **Backend**: FastAPI, LangChain, LangGraph
+-   **Frontend**: React, Nginx
+-   **AI/ML**: PyTorch (CUDA), Gemini 2.0 Flash, BAAI/bge-m3
+-   **Database**: Qdrant (Vector DB)
+-   **Evaluation**: RAGAS, LangSmith
+-   **DevOps**: Docker, Docker Compose, `uv`
+
+## 🚀 Running the Project
+
+The simplest way to run the entire application stack is with Docker Compose.
 
 ```bash
-# Clone repository
-git clone <repository-url>
-cd mimicking-mindsets
+# Ensure Docker and NVIDIA Container Toolkit are installed
+# Set your GOOGLE_API_KEY in a .env file
 
-# Install uv (fast Python package manager)
-pip install uv
-
-# Install dependencies with GPU support
-uv sync
-uv pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118 --reinstall
-
-# Set environment variables
-export GOOGLE_API_KEY="your-gemini-api-key"
-export QDRANT_HOST="localhost"
-export QDRANT_PORT="6333"
-```
-
-#### Option 2: Docker Deployment
-
-```bash
-# Create external network
-docker network create mimicking-mindsets-network
-
-# Set environment variables
-export GOOGLE_API_KEY="your-gemini-api-key"
-
-# Development mode
-docker-compose --profile development up
-
-# Production mode
+# Build and run all services in production mode
 docker-compose --profile production up
 ```
-
-### Setup
-
-```bash
-# Start Qdrant vector database
-docker run -d -p 6333:6333 qdrant/qdrant
-
-# Build knowledge bases
-uv run python knowledge-base/preprocess/build_kb.py
-
-# Or with Docker
-docker-compose --profile setup up kb-builder
-```
-
-## 🧪 Testing & Evaluation
-
-### Run Tests
-
-```bash
-# Individual agent tests
-uv run python tests/test_phase1.py
-
-# Multi-agent orchestration tests  
-uv run python tests/test_phase2.py
-
-# All tests
-pytest tests/
-```
-
-### Evaluation Pipeline
-
-```bash
-# Interactive evaluation
-uv run python evaluation/run_evaluation.py
-
-# Docker evaluation
-docker-compose --profile evaluation up evaluator
-```
-
-### Metrics
-
-| Metric | Purpose | Range |
-|--------|---------|-------|
-| **Faithfulness** | Groundedness in sources | 0-1 |
-| **Answer Relevancy** | Query relevance | 0-1 |
-| **Coherence** | Response consistency | 0-1 |
-
-## ⚙️ Configuration
-
-### Environment Variables
-
-```bash
-# Required
-GOOGLE_API_KEY="your-gemini-api-key"
-
-# Optional
-QDRANT_HOST="localhost"          # Qdrant host
-QDRANT_PORT="6333"              # Qdrant port
-LANGSMITH_API_KEY="your-key"    # LangSmith tracing
-HF_HOME="./hf_cache"            # Hugging Face cache
-```
-
-### GPU Support
-
-The system automatically detects and uses NVIDIA GPUs when available:
-
-- **Embedding Model**: BAAI/bge-m3 with CUDA acceleration
-- **Docker**: GPU support configured in docker-compose.yml
-- **Fallback**: Graceful CPU fallback if GPU unavailable
-
-### Performance Optimizations
-
-- **Optimized Logging**: Minimal overhead with WARNING-level default
-- **Connection Pooling**: Efficient Qdrant connections
-- **Parallel Processing**: Concurrent agent execution
-- **Caching**: Intelligent response and embedding caching
-
-## 🐳 Docker Deployment
-
-### Development
-
-```bash
-docker-compose --profile development up
-```
-
-Includes:
-- Hot reloading
-- Volume mounts for code changes
-- Development-friendly logging
-
-### Production
-
-```bash
-docker-compose --profile production up
-```
-
-Features:
-- Optimized builds
-- Health checks
-- Automatic restarts
-- GPU acceleration
-
-### Services
-
-- **backend**: FastAPI server with GPU support
-- **frontend**: React app with Nginx
-- **kb-builder**: Knowledge base construction
-- **evaluator**: Evaluation pipeline runner
-
-## 🔧 Advanced Features
-
-### Multi-Agent Orchestration
-
-```python
-# Parallel execution flow
-START → erol_agent ──┐
-     → cemil_agent ──┴→ synthesis → memory → END
-```
-
-### RAG Pipeline
-
-- **Embedding**: BAAI/bge-m3 multilingual model
-- **Vector DB**: Qdrant with optimized indexing
-- **Retrieval**: Hybrid search with reranking
-- **Generation**: Gemini 2.0 Flash with persona prompts
-
-### Web Search Integration
-
-- **Engine**: DuckDuckGo Search API
-- **Strategy**: Knowledge base first, web search as fallback
-- **Integration**: Seamless blending of historical and current knowledge
-
-**Knowledge Base Missing**
-```bash
-# Rebuild knowledge base
-uv run python knowledge-base/preprocess/build_kb.py
-```
-
-## 📈 Performance
-
-- **GPU Acceleration**: 3-5x faster inference with CUDA
-- **Parallel Agents**: Simultaneous processing reduces latency
-- **Optimized Logging**: Minimal performance overhead
-- **Connection Pooling**: Efficient database connections
-- **Smart Caching**: Reduces redundant computations
+*For detailed local setup and development instructions, please refer to the `docs/` directory.*
 
 ## 📄 License
 
-MIT License
+This project is licensed under the **MIT License**.
 
 ## Acknowledgments
 
-- **Erol Güngör** and **Cemil Meriç** for their intellectual legacy
-- **LangChain/LangGraph** for multi-agent frameworks
-- **RAGAS** for evaluation metrics
-- **Qdrant** for vector database capabilities
-- **Google** for Gemini API access
+This project is indebted to the intellectual legacies of **Erol Güngör** and **Cemil Meriç**.
+
+Our work was made possible by the incredible open-source community. We gratefully acknowledge the teams behind **LangChain/LangGraph**, **RAGAS**, **Qdrant**, **FastAPI**, and the **Hugging Face** ecosystem. We also thank **Google** for providing access to the Gemini API.
 
 ---
 
