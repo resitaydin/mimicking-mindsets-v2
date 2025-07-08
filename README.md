@@ -2,6 +2,9 @@
 
 A high-performance multi-agent AI system that simulates conversations with Turkish intellectuals **Erol Güngör** and **Cemil Meriç**. The system leverages a sophisticated Retrieval-Augmented Generation (RAG) pipeline, real-time web search, and GPU-accelerated inference to create authentic, interactive AI personas.
 
+## Project Demo Link
+https://youtu.be/2BEAOz0VQKg
+
 ## Project Overview
 
 This project aims to bridge the gap between historical intellectual heritage and contemporary dialogue. By creating dynamic AI personas of Erol Güngör and Cemil Meriç, users can explore complex ideas on culture, philosophy, and society in an interactive format. The system moves beyond static text by combining a deep knowledge base, derived from the complete works of both thinkers, with the ability to access current information via web search. This dual capability allows the agents to provide thoughtful, nuanced responses that are grounded in their original perspectives yet relevant to modern-day issues.
