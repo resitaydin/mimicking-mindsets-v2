@@ -1,141 +1,131 @@
-# Mimicking Mindsets v2
+# Mimicking Mindsets: A Multi-Agent AI System for Simulating Intellectual Personas
 
-AI-Generated Insights from Influential Turkish Minds
+A high-performance multi-agent AI system that simulates conversations with Turkish intellectuals **Erol Güngör** and **Cemil Meriç**. The system leverages a sophisticated Retrieval-Augmented Generation (RAG) pipeline, real-time web search, and GPU-accelerated inference to create authentic, interactive AI personas.
 
-## Overview
+## Project Demo Link
+https://youtu.be/2BEAOz0VQKg
 
-This multi-agent system allows you to interact with AI representations of prominent Turkish intellectuals. The system provides synthesized insights from multiple perspectives using a sophisticated RAG (Retrieval-Augmented Generation) architecture.
+## Project Overview
 
-### Available Personas
-- **Cemil Meriç** (1916-1987): Intellectual, translator, essayist. Expert in Eastern/Western philosophy, French literature, cultural synthesis.
-- **Erol Güngör** (1938-1983): Psychologist, sociologist. Expert in social psychology, Turkish cultural psychology, social change.
+This project aims to bridge the gap between historical intellectual heritage and contemporary dialogue. By creating dynamic AI personas of Erol Güngör and Cemil Meriç, users can explore complex ideas on culture, philosophy, and society in an interactive format. The system moves beyond static text by combining a deep knowledge base, derived from the complete works of both thinkers, with the ability to access current information via web search. This dual capability allows the agents to provide thoughtful, nuanced responses that are grounded in their original perspectives yet relevant to modern-day issues.
 
-## Architecture
+The core of the system is a multi-agent architecture where each intellectual is represented by a distinct AI agent. These agents process queries in parallel and collaborate to produce a synthesized, dialogical answer, simulating a rich intellectual exchange.
 
-### Phase 1: Knowledge Base Construction (`build_kb.py`)
-- PDF text extraction and preprocessing
-- Text chunking and embedding generation
-- Vector storage in Qdrant collections
+## System Architecture
 
-### Phase 2: Runtime Interaction
-- **Memory Module**: Conversation history management
-- **Persona Agents**: Individual intellectual perspectives with knowledge retrieval
-- **Orchestrator Agent**: Central coordination and response synthesis
-- **Web Search Tool**: For current information not in historical knowledge base
+The system is designed as a modular, multi-agent pipeline that ensures efficient and high-quality response generation.
 
-## Prerequisites
+```
+┌─────────────────┐      ┌─────────────────┐
+│   Erol Güngör   │      │   Cemil Meriç   │
+│   Agent (RAG)   │      │   Agent (RAG)   │
+└─────────┬───────┘      └─────────┬───────┘
+          │                        │
+          ├──────────┬─────────────┤
+                     │
+          ┌─────────────────┐
+          │  Orchestrator   │
+          │  (LangGraph)    │
+          └─────────┬───────┘
+                    │
+          ┌─────────────────┐
+          │    Synthesizer  │
+          │ (Gemini 2.0 Flash)│
+          └─────────┬───────┘
+                    │
+          ┌─────────────────┐
+          │ Web Interface   │
+          │(React + FastAPI)│
+          └─────────────────┘
+```
+**Data Flow:**
+1.  A user query is submitted through the **React** frontend.
+2.  The **FastAPI** backend receives the request and passes it to the **LangGraph Orchestrator**.
+3.  The orchestrator dispatches the query to both the **Erol Güngör** and **Cemil Meriç** agents to be processed **in parallel**.
+4.  Each agent uses its dedicated knowledge base and web search tools to formulate a perspective.
+5.  The individual responses are sent to a final **Synthesizer** LLM, which combines them into a single, coherent, and conversational answer.
+6.  The final response is streamed back to the user interface.
 
-1. **Python 3.12+**
-2. **Qdrant** vector database
-3. **Gemini API key** from Google AI Studio
+## Methodology & Implementation
 
-## Quick Start
+The project was developed in two main phases: building the knowledge foundation and implementing the intelligent agent system.
 
-### 1. Install Dependencies
+### 1. The Knowledge Foundation (Persona-Specific RAG)
+
+Creating authentic personas required building a deep, structured knowledge base for each intellectual.
+
+-   **Data Collection & Preprocessing**: The complete works of Erol Güngör and Cemil Meriç were digitized, cleaned, and normalized to create a high-quality text corpus.
+-   **Text Chunking**: The corpus was divided into smaller, semantically meaningful chunks with overlap to ensure contextual integrity during retrieval.
+-   **Vector Embeddings**: Each text chunk was converted into a numerical vector using the powerful, multilingual **BAAI/bge-m3** embedding model, running with CUDA acceleration.
+-   **Vector Database**: These embeddings are stored in two separate **Qdrant** collections, one for each persona. This separation allows for highly targeted and efficient semantic searches.
+
+### 2. The Multi-Agent System
+
+The core logic is handled by a sophisticated multi-agent system designed for collaboration and intelligent decision-making.
+
+-   **Multi-Agent Orchestration**: **LangGraph** is used to define and execute the conversational flow. It enables parallel processing of queries by both agents, drastically reducing latency and facilitating a final synthesis step.
+-   **Intelligent Tool Use**: Each agent operates using the **ReAct (Reason and Act)** framework. This allows an agent to autonomously decide which tool to use:
+    -   **Search Internal Knowledge Base**: The primary action to find relevant passages from the thinker's works.
+    -   **Search the Web**: A fallback action using the **DuckDuckGo Search API** if the internal knowledge is insufficient or if the query requires contemporary information.
+    -   **Generate Response**: The final action once sufficient context has been gathered.
+
+## Evaluation & Results
+
+The system's performance was rigorously evaluated using a combination of quantitative metrics and qualitative expert review.
+
+### Quantitative Metrics (RAGAS Framework)
+
+We established an evaluation pipeline using the **RAGAS** framework to measure the quality of the generated responses. The key metrics, averaged over a diverse set of test queries, are:
+
+| Metric | Description | Average Score |
+| :--- | :--- | :--- |
+| **Faithfulness** | Measures how factually consistent the answer is with the retrieved context. | **0.88 / 1.0** |
+| **Answer Relevancy** | Measures how relevant the answer is to the original query. | **0.70 / 1.0** |
+| **Coherence** | Measures the logical flow and readability of the answer. | **1.00 / 1.0** |
+
+These results indicate that the system generates highly coherent responses that are strongly grounded in the source material.
+
+### Qualitative Validation
+
+A collaborating history expert, **Doç. Dr. Yasemin Hoca**, reviewed the system's outputs for persona accuracy and intellectual style. Her feedback confirmed that the system successfully captures the distinct tones, vocabularies, and philosophical stances of both Erol Güngör and Cemil Meriç.
+
+### Monitoring
+
+**LangSmith** was integrated for real-time tracing of every step in the agent and RAG pipelines, which was invaluable for debugging, optimization, and ensuring quality.
+
+## Technical Stack
+
+-   **Backend**: FastAPI, LangChain, LangGraph
+-   **Frontend**: React, Nginx
+-   **AI/ML**: PyTorch (CUDA), Gemini 2.0 Flash, BAAI/bge-m3
+-   **Database**: Qdrant (Vector DB)
+-   **Evaluation**: RAGAS, LangSmith
+-   **DevOps**: Docker, Docker Compose, `uv`
+
+## Running the Project
+
+The simplest way to run the entire application stack is with Docker Compose.
+
 ```bash
-uv sync
+# Ensure Docker and NVIDIA Container Toolkit are installed
+# Set your GOOGLE_API_KEY in a .env file
+
+# Build and run all services in production mode
+docker-compose --profile production up
 ```
-
-### 2. Start Qdrant
-```bash
-# Using Docker (recommended)
-docker run -p 6333:6333 qdrant/qdrant
-```
-
-### 3. Set Environment Variables
-Create a `.env` file:
-```env
-GEMINI_API_KEY=your_actual_api_key_here
-QDRANT_HOST=localhost
-QDRANT_PORT=6333
-```
-
-### 4. Build Knowledge Base
-```bash
-python build_kb.py
-```
-
-### 5. Run the System
-```bash
-python main.py
-```
-
-## Usage
-
-### Interactive Commands
-- Type questions naturally for synthesized responses
-- `/help` - Show help information  
-- `/summary` - View conversation summary
-- `/clear` - Clear conversation history
-- `/export <filename>` - Export conversation to JSON
-- `/quit` - Exit system
-
-### Example Questions
-- "What is the relationship between culture and civilization?"
-- "How does modernization affect traditional values?"
-- "What role does psychology play in understanding society?"
-
-## System Flow
-
-1. **Query Analysis**: Orchestrator determines relevant persona agents
-2. **Parallel Processing**: Multiple agents process query concurrently
-3. **Knowledge Retrieval**: Each agent searches its Qdrant collection
-4. **Web Search**: Additional context if needed for current topics
-5. **Response Generation**: Gemini LLM generates persona-specific responses
-6. **Synthesis**: Orchestrator combines perspectives into coherent answer
-7. **Memory Storage**: Conversation history is maintained
-
-## Technical Features
-
-- **Hybrid Search**: Semantic similarity + keyword matching
-- **Concurrent Processing**: Parallel agent execution for efficiency
-- **Context Management**: Conversation continuity across turns
-- **Source Attribution**: References to original works when available
-- **Adaptive Querying**: Query enhancement for better retrieval
-- **Error Resilience**: Graceful handling of failures
-
-## Development
-
-### File Structure
-```
-├── build_kb.py          # Knowledge base construction
-├── main.py              # Entry point
-├── runtime.py           # Main runtime system
-├── orchestrator.py      # Central coordination agent
-├── persona_agents.py    # Individual persona agents
-├── memory.py            # Conversation memory management
-├── pyproject.toml       # Dependencies
-└── README.md           # This file
-```
-
-### Adding New Personas
-1. Add persona configuration to `runtime.py`
-2. Create new agent class in `persona_agents.py`
-3. Add PDF files to appropriate directory
-4. Update `build_kb.py` configuration
-5. Rebuild knowledge base
-
-## Performance Notes
-
-- First run downloads embedding model (~500MB)
-- GPU acceleration available for embeddings
-- Qdrant collections are created automatically
-- Web search is used sparingly for current topics
-
-## Troubleshooting
-
-**Qdrant Connection Issues**
-- Verify Qdrant is running and accessible
-- Check host/port configuration
-
-**Missing Collections**
-- Run `build_kb.py` to create knowledge base
-- Ensure PDF files exist in correct directories
-
-**API Errors**
-- Verify Gemini API key is valid
-- Check API quota and billing status
+*For detailed local setup and development instructions, please refer to the `docs/` directory.*
 
 ## License
 
-This project is part of the Mimicking Mindsets research initiative.
+This project is licensed under the **MIT License**.
+
+## Acknowledgments
+
+This project is indebted to the intellectual legacies of **Erol Güngör** and **Cemil Meriç**.
+
+Our work was made possible by the incredible open-source community. We gratefully acknowledge the teams behind **LangChain/LangGraph**, **RAGAS**, **Qdrant**, **FastAPI**, and the **Hugging Face** ecosystem. We also thank **Google** for providing access to the Gemini API.
+
+---
+
+*Preserving Turkish intellectual heritage through AI* 🇹🇷
+- **R.A. 25/06/2025 GTU**

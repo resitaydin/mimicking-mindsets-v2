@@ -1,0 +1,167 @@
+services:
+  # Backend API
+  backend:
+    build:
+      context: .
+      target: production
+    container_name: mimicking-mindsets-backend
+    profiles: ["production"]
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_HOST=my-qdrant-instance
+      - QDRANT_PORT=6333
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - HF_HOME=/app/hf_cache
+      - HUGGINGFACE_HUB_CACHE=/app/hf_cache
+      - ENVIRONMENT=production
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+      - ./hf_cache:/app/hf_cache
+    restart: unless-stopped
+    # GPU support for CUDA acceleration
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mimicking-mindsets-network
+
+  # Backend API (Development)
+  backend-dev:
+    build:
+      context: .
+      target: development
+    container_name: mimicking-mindsets-backend-dev
+    profiles: ["development"]
+    volumes:
+      - .:/app
+      - ./hf_cache:/app/hf_cache
+    ports:
+      - "8000:8000"
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_HOST=my-qdrant-instance
+      - QDRANT_PORT=6333
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+      - HF_HOME=/app/hf_cache
+      - HUGGINGFACE_HUB_CACHE=/app/hf_cache
+      - ENVIRONMENT=development
+    restart: unless-stopped
+    # GPU support for CUDA acceleration  
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - mimicking-mindsets-network
+
+  # Frontend (for development)
+  frontend-dev:
+    image: node:18-alpine
+    container_name: mimicking-mindsets-frontend-dev
+    working_dir: /app
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./web-interface/frontend:/app
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend-dev
+    profiles:
+      - development
+    networks:
+      - mimicking-mindsets-network
+
+  # Frontend (for production)
+  frontend:
+    build:
+      context: ./web-interface/frontend
+      dockerfile: Dockerfile.prod
+    container_name: mimicking-mindsets-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+    profiles:
+      - production
+    networks:
+      - mimicking-mindsets-network
+
+  # Knowledge Base Builder
+  kb-builder:
+    build:
+      context: .
+      target: development
+    container_name: mimicking-mindsets-kb-builder
+    volumes:
+      - ./knowledge-base:/app/knowledge-base
+      - ./data:/app/data
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_HOST=my-qdrant-instance
+      - QDRANT_PORT=6333
+    command: uv run python knowledge-base/preprocess/build_kb.py
+    profiles:
+      - setup
+    # GPU support for faster knowledge base building
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - mimicking-mindsets-network
+
+  # Evaluation Runner
+  evaluator:
+    build:
+      context: .
+      target: development
+    container_name: mimicking-mindsets-evaluator
+    volumes:
+      - ./evaluation:/app/evaluation
+      - ./logs:/app/logs
+      - .:/app
+    environment:
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - QDRANT_HOST=localhost
+      - QDRANT_PORT=6333
+      - LANGSMITH_API_KEY=${LANGSMITH_API_KEY}
+    command: uv run python evaluation/run_evaluation.py
+    profiles:
+      - evaluation
+    # GPU support for faster evaluation
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - mimicking-mindsets-network
+
+networks:
+  mimicking-mindsets-network:
+    external: true
